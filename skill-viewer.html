@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="sv" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skill Viewer — Göteborgs Stad</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root {
+  --gs-blue:#0077bc;--gs-blue-d:#005fa3;
+  --bg:#FFFFFE;--bg-footer:#F5F5F5;--bg-nav:#F4F9FC;--bg-info:#F2F9F9;--bg-card:#ffffff;
+  --text:#333333;--text-2:#6E6E6E;--link:#005799;--border:#979797;--border-l:#d1d9dc;
+  --shadow:0 1px 4px rgba(0,119,188,.10),0 2px 12px rgba(0,0,0,.07);
+  --r:4px;--r-lg:8px;
+  --turquoise:#008391;--green:#5a8b3b;--yellow:#ffd666;--red:#d24723;--darkBlue:#3f5564;
+  --sidebar-w:268px;--toolbar-h:46px;
+}
+[data-theme="dark"]{
+  --bg:#1F1F1F;--bg-footer:#121212;--bg-nav:#1a1a1a;--bg-info:#242424;--bg-card:#2a2a2a;
+  --text:#FFFFFF;--text-2:#b0b8bb;--link:#479EF5;--border:#555;--border-l:#3a3a3a;
+  --shadow:0 1px 4px rgba(0,0,0,.4),0 2px 12px rgba(0,0,0,.3);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Goteborg',Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:var(--text);background:var(--bg);display:flex;flex-direction:column}
+
+/* HEADER */
+.header{height:54px;background:var(--gs-blue);display:flex;align-items:center;padding:0 18px;gap:14px;box-shadow:0 2px 8px rgba(0,0,0,.25);flex-shrink:0;z-index:100}
+.logo-mark{width:34px;height:34px;background:rgba(255,255,255,.14);border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:1.2rem}
+.logo-text{color:#fff;font-weight:700;font-size:.9rem;letter-spacing:.01em}
+.logo-sub{color:rgba(255,255,255,.65);font-size:.68rem;font-weight:400;display:block}
+.hdr-sep{width:1px;height:26px;background:rgba(255,255,255,.22)}
+.hdr-title{color:rgba(255,255,255,.88);font-size:.82rem;font-weight:500;flex:1}
+.hdr-actions{display:flex;gap:5px;align-items:center}
+
+/* TABS */
+.tabs{display:flex;background:var(--bg-nav);border-bottom:1px solid var(--border-l);padding:0 18px;gap:2px;flex-shrink:0}
+.tab{padding:9px 15px;border:none;background:none;font:inherit;font-size:.8rem;font-weight:500;color:var(--text-2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s;display:flex;align-items:center;gap:5px}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--gs-blue);border-bottom-color:var(--gs-blue)}
+
+/* WORKSPACE */
+.workspace{flex:1;display:flex;overflow:hidden}
+.panel{display:none;flex:1;overflow:hidden}
+.panel.active{display:flex}
+
+/* VIEWER EMPTY */
+.viewer-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:36px}
+.drop-zone{width:100%;max-width:500px;border:2px dashed var(--border);border-radius:12px;padding:38px 28px;text-align:center;background:var(--bg-info);cursor:pointer;transition:border-color .2s,background .2s,transform .15s;position:relative}
+.drop-zone:hover,.drop-zone.over{border-color:var(--gs-blue);background:#e6f3fc;transform:scale(1.01)}
+[data-theme="dark"] .drop-zone:hover,[data-theme="dark"] .drop-zone.over{background:#0e2030}
+.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-icon{font-size:2.6rem;margin-bottom:10px}
+.drop-zone h2{font-size:1.1rem;margin-bottom:5px}
+.drop-zone p{color:var(--text-2);font-size:.83rem;line-height:1.65}
+.drop-zone strong{color:var(--gs-blue)}
+.drop-zone code{background:var(--bg-nav);border:1px solid var(--border-l);border-radius:3px;padding:1px 5px;font-size:.82em}
+
+/* VIEWER OPEN */
+.viewer-open{flex:1;display:flex;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar-w);flex-shrink:0;background:var(--bg-nav);border-right:1px solid var(--border-l);display:flex;flex-direction:column;overflow:hidden}
+.sb-hdr{padding:10px 12px 9px;border-bottom:1px solid var(--border-l);flex-shrink:0}
+.sb-fname{font-size:.78rem;font-weight:700;color:var(--gs-blue);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+.sb-meta{font-size:.7rem;color:var(--text-2);margin-bottom:7px}
+.sb-actions{display:flex;gap:4px;flex-wrap:wrap}
+.search-box{padding:8px 10px;border-bottom:1px solid var(--border-l);flex-shrink:0}
+.search-wrap{position:relative}
+.search-ico{position:absolute;left:7px;top:50%;transform:translateY(-50%);color:var(--text-2);font-size:.8rem;pointer-events:none}
+.search-input{width:100%;padding:5px 8px 5px 26px;border:1px solid var(--border-l);border-radius:var(--r);font:inherit;font-size:.78rem;background:var(--bg);color:var(--text)}
+.search-input:focus{outline:2px solid var(--gs-blue);border-color:transparent}
+.tree-wrap{flex:1;overflow-y:auto;padding:6px 0}
+
+/* TREE */
+.tree-item{display:flex;align-items:center;gap:5px;padding:4px 10px;cursor:pointer;font-size:.8rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .12s;user-select:none}
+.tree-item:hover{background:rgba(0,119,188,.07)}
+.tree-item.active{background:rgba(0,119,188,.14);color:var(--gs-blue);font-weight:600}
+.tree-item.folder{color:var(--darkBlue);font-weight:600;cursor:default}
+[data-theme="dark"] .tree-item.folder{color:#7ec8f0}
+.tree-item .ti{font-size:.82rem;flex-shrink:0}
+.tree-item.hl{background:rgba(255,214,102,.3)}
+.tree-indent{display:inline-block;flex-shrink:0}
+
+/* CONTENT */
+.content-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.ctoolbar{height:var(--toolbar-h);display:flex;align-items:center;padding:0 14px;gap:7px;border-bottom:1px solid var(--border-l);background:var(--bg);flex-shrink:0;overflow-x:auto}
+.breadcrumb{flex:1;font-size:.76rem;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.breadcrumb strong{color:var(--text)}
+.view-seg{display:flex;gap:2px;flex-shrink:0}
+.vseg{padding:3px 10px;border-radius:var(--r);font:inherit;font-size:.74rem;cursor:pointer;border:1px solid var(--border-l);background:var(--bg);color:var(--text-2);transition:all .14s}
+.vseg.on{background:var(--gs-blue);color:#fff;border-color:var(--gs-blue)}
+.cbody{flex:1;overflow-y:auto;padding:22px 26px}
+
+/* MARKDOWN */
+.md{max-width:800px}
+.md h1{font-size:1.55rem;color:var(--gs-blue);margin:0 0 12px;padding-bottom:7px;border-bottom:2px solid var(--border-l)}
+.md h2{font-size:1.18rem;margin:24px 0 9px;padding-bottom:3px;border-bottom:1px solid var(--border-l)}
+.md h3{font-size:1.02rem;margin:17px 0 6px}
+.md h4{font-size:.95rem;font-weight:700;margin:13px 0 4px}
+.md p{margin:0 0 10px}
+.md ul,.md ol{margin:0 0 10px 20px}
+.md li{margin-bottom:2px}
+.md a{color:var(--link)}
+.md strong{font-weight:700}
+.md em{font-style:italic}
+.md code{background:var(--bg-nav);border:1px solid var(--border-l);border-radius:3px;padding:1px 4px;font-family:'Consolas','Monaco',monospace;font-size:.83em;color:var(--darkBlue)}
+[data-theme="dark"] .md code{color:#7dd3fc}
+.md pre{background:var(--bg-nav);border:1px solid var(--border-l);border-radius:var(--r);padding:12px 15px;overflow-x:auto;margin:9px 0}
+.md pre code{background:none;border:none;padding:0;font-size:.83rem;color:var(--text)}
+.md blockquote{border-left:3px solid var(--gs-blue);margin:9px 0;padding:6px 13px;background:var(--bg-info);border-radius:0 var(--r) var(--r) 0;color:var(--text-2)}
+.md table{width:100%;border-collapse:collapse;margin:9px 0;font-size:.86rem}
+.md th{background:var(--gs-blue);color:#fff;padding:6px 10px;text-align:left;font-weight:600}
+.md td{padding:6px 10px;border-bottom:1px solid var(--border-l)}
+.md tr:nth-child(even) td{background:var(--bg-nav)}
+.md hr{border:none;border-top:1px solid var(--border-l);margin:16px 0}
+.fm-box{background:var(--bg-nav);border:1px solid var(--gs-blue);border-radius:var(--r-lg);padding:10px 14px;margin-bottom:18px;font-size:.8rem}
+.fm-lbl{font-size:.68rem;font-weight:700;color:var(--gs-blue);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px}
+.fm-row{display:flex;gap:9px;margin-bottom:2px}
+.fm-k{color:var(--gs-blue);font-weight:600;min-width:96px;flex-shrink:0}
+.fm-v{color:var(--text-2);word-break:break-word}
+.raw-view{font-family:'Consolas','Monaco',monospace;font-size:.82rem;white-space:pre-wrap;word-break:break-all;background:var(--bg-nav);border:1px solid var(--border-l);border-radius:var(--r-lg);padding:14px 16px;color:var(--text);line-height:1.6;max-width:880px}
+.img-preview{max-width:100%;max-height:480px;border-radius:var(--r-lg);border:1px solid var(--border-l);box-shadow:var(--shadow)}
+.file-info-box{display:inline-flex;flex-direction:column;gap:5px;background:var(--bg-nav);border:1px solid var(--border-l);border-radius:var(--r-lg);padding:16px 20px;font-size:.86rem}
+.fib-icon{font-size:2.4rem;margin-bottom:3px}
+.fib-row{display:flex;gap:9px}
+.fib-k{font-weight:700;color:var(--gs-blue);min-width:76px}
+.fib-v{color:var(--text-2)}
+.sr-item{background:var(--bg-card);border:1px solid var(--border-l);border-radius:var(--r-lg);padding:11px 14px;cursor:pointer;transition:border-color .14s;margin-bottom:9px}
+.sr-item:hover{border-color:var(--gs-blue)}
+.sr-path{font-size:.76rem;color:var(--gs-blue);font-weight:600;margin-bottom:3px}
+.sr-snip{font-size:.8rem;color:var(--text-2);font-family:'Consolas','Monaco',monospace;white-space:pre-wrap;line-height:1.5}
+.sr-snip mark{background:#ffd66688;color:var(--text);border-radius:2px}
+
+/* EDITOR */
+.editor-panel{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.etoolbar{height:var(--toolbar-h);display:flex;align-items:center;padding:0 14px;gap:7px;border-bottom:1px solid var(--border-l);background:var(--bg-nav);flex-shrink:0}
+.emain{flex:1;display:grid;grid-template-columns:1fr 1fr;overflow:hidden}
+.eleft,.eright{display:flex;flex-direction:column;overflow:hidden}
+.eleft{border-right:1px solid var(--border-l)}
+.pane-hdr{padding:7px 13px;background:var(--bg-nav);border-bottom:1px solid var(--border-l);font-size:.72rem;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.meta-bar{padding:9px 12px;background:var(--bg-info);border-bottom:1px solid var(--border-l);display:grid;grid-template-columns:1fr 1fr;gap:7px;flex-shrink:0}
+.meta-bar .full{grid-column:1/-1}
+.mf label{display:block;font-size:.7rem;font-weight:700;color:var(--text-2);margin-bottom:2px}
+.mf input,.mf textarea{width:100%;padding:4px 8px;border:1px solid var(--border-l);border-radius:var(--r);font:inherit;font-size:.8rem;background:var(--bg);color:var(--text)}
+.mf input:focus,.mf textarea:focus{outline:2px solid var(--gs-blue);border-color:transparent}
+.mf textarea{resize:none;height:48px}
+#skill-editor{flex:1;border:none;resize:none;outline:none;font-family:'Consolas','Monaco',monospace;font-size:.82rem;line-height:1.65;padding:14px;background:var(--bg);color:var(--text);overflow-y:auto}
+.estatus{padding:3px 13px;font-size:.7rem;color:var(--text-2);background:var(--bg-footer);border-top:1px solid var(--border-l);display:flex;gap:12px;flex-shrink:0}
+.sdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:3px}
+.preview-scroll{flex:1;overflow-y:auto;padding:18px 20px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:var(--r);font:inherit;font-size:.78rem;cursor:pointer;border:none;transition:background .14s,opacity .14s;text-decoration:none;white-space:nowrap;flex-shrink:0}
+.btn-xs{padding:3px 8px;font-size:.72rem}
+.btn-sm{padding:4px 10px;font-size:.76rem}
+.btn-white{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.32)}
+.btn-white:hover{background:rgba(255,255,255,.26)}
+.btn-primary{background:var(--gs-blue);color:#fff}
+.btn-primary:hover{background:var(--gs-blue-d)}
+.btn-secondary{background:var(--bg);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--bg-nav)}
+.btn-success{background:var(--green);color:#fff}
+.btn-success:hover{opacity:.88}
+.btn-teal{background:var(--turquoise);color:#fff}
+.btn-teal:hover{opacity:.88}
+.theme-btn{width:32px;height:32px;border-radius:var(--r);background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.28);color:#fff;font-size:.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.theme-btn:hover{background:rgba(255,255,255,.22)}
+.hidden{display:none!important}
+footer{background:var(--bg-footer);border-top:1px solid var(--border-l);padding:7px 18px;font-size:.72rem;color:var(--text-2);text-align:center;flex-shrink:0}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-l);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border)}
+@media(max-width:700px){
+  .emain{grid-template-columns:1fr}
+  .eright{display:none}
+  .hdr-title{display:none}
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="logo-mark">🏛️</div>
+    <div class="logo-text">Göteborgs Stad<span class="logo-sub">Intraservice</span></div>
+  </div>
+  <div class="hdr-sep"></div>
+  <div class="hdr-title">Skill Viewer &amp; Editor</div>
+  <div class="hdr-actions">
+    <button class="theme-btn" onclick="toggleTheme()" title="Växla tema">🌓</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" data-tab="viewer" onclick="switchTab('viewer')">📂 Visa .skills</button>
+  <button class="tab" data-tab="editor" onclick="switchTab('editor')">✏️ Skapa / Redigera</button>
+</div>
+
+<div class="workspace">
+
+  <!-- VIEWER -->
+  <div id="panel-viewer" class="panel active">
+    <div id="viewer-empty" class="viewer-empty">
+      <div class="drop-zone" id="drop-zone"
+        ondrop="handleDrop(event)"
+        ondragover="ev=>{ev.preventDefault();document.getElementById('drop-zone').classList.add('over')}"
+        ondragleave="document.getElementById('drop-zone').classList.remove('over')">
+        <input type="file" id="file-input" accept=".skills,.skill,.md,.zip" onchange="handleFileSelect(event)">
+        <div class="drop-icon">🗜️</div>
+        <h2>Öppna en .skills-fil</h2>
+        <p>
+          Dra och släpp en <strong>.skills</strong>-fil hit<br>
+          (även <strong>.skill</strong>, <strong>.md</strong>, <strong>.zip</strong>)<br><br>
+          En <em>.skills</em>-fil är ett zip-arkiv med<br>
+          <code>SKILL.md</code> och kataloger som<br>
+          <code>scripts/</code> · <code>references/</code> · <code>assets/</code>
+        </p>
+      </div>
+    </div>
+
+    <div id="viewer-open" class="viewer-open hidden">
+      <div class="sidebar">
+        <div class="sb-hdr">
+          <div class="sb-fname" id="sb-fname">—</div>
+          <div class="sb-meta" id="sb-meta">—</div>
+          <div class="sb-actions">
+            <button class="btn btn-xs btn-secondary" onclick="resetViewer()">✕ Stäng</button>
+            <button class="btn btn-xs btn-teal" onclick="sendToEditor()">✏️ Redigera</button>
+            <button class="btn btn-xs btn-success" onclick="downloadSkillsFile()">⬇ .skills</button>
+          </div>
+        </div>
+        <div class="search-box">
+          <div class="search-wrap">
+            <span class="search-ico">🔍</span>
+            <input type="text" class="search-input" id="search-input" placeholder="Sök i alla textfiler..." oninput="onSearch(this.value)">
+          </div>
+        </div>
+        <div class="tree-wrap" id="tree-wrap"></div>
+      </div>
+
+      <div class="content-main">
+        <div class="ctoolbar">
+          <div class="breadcrumb" id="breadcrumb">—</div>
+          <div class="view-seg">
+            <button class="vseg on" id="vseg-r" onclick="setView('rendered')">Renderad</button>
+            <button class="vseg" id="vseg-w" onclick="setView('raw')">Raw</button>
+          </div>
+          <button class="btn btn-xs btn-secondary" onclick="copyContent()">📋 Kopiera</button>
+        </div>
+        <div class="cbody" id="cbody">
+          <p style="color:var(--text-2)">Välj en fil i trädet till vänster.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDITOR -->
+  <div id="panel-editor" class="panel">
+    <div class="editor-panel">
+      <div class="etoolbar">
+        <span style="font-size:.78rem;font-weight:600;color:var(--text-2);flex:1">Skill-editor</span>
+        <button class="btn btn-sm btn-secondary" onclick="insertTemplate()">📋 Mall</button>
+        <button class="btn btn-sm btn-secondary" onclick="clearEditor()">🗑 Rensa</button>
+        <button class="btn btn-sm btn-success" onclick="downloadFromEditor()">⬇ Ladda ner .skills</button>
+      </div>
+      <div class="emain">
+        <div class="eleft">
+          <div class="pane-hdr">✏️ Markdown</div>
+          <div class="meta-bar">
+            <div class="mf"><label>name</label><input id="ed-name" placeholder="min-skill" oninput="onEditorChange()"></div>
+            <div class="mf"><label>location</label><input id="ed-location" placeholder="/mnt/skills/user/min-skill/SKILL.md" oninput="onEditorChange()"></div>
+            <div class="mf full"><label>description</label><textarea id="ed-desc" placeholder="Beskriv när och hur denna skill ska användas..." oninput="onEditorChange()"></textarea></div>
+          </div>
+          <textarea id="skill-editor" spellcheck="false" placeholder="# Rubrik&#10;&#10;## Avsnitt&#10;&#10;..." oninput="onEditorChange()"></textarea>
+          <div class="estatus">
+            <span><span class="sdot"></span>Redigerar</span>
+            <span id="ed-chars">0 tecken</span>
+            <span id="ed-lines">0 rader</span>
+          </div>
+        </div>
+        <div class="eright">
+          <div class="pane-hdr">👁 Förhandsgranskning</div>
+          <div class="preview-scroll"><div class="md" id="ed-preview"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>Göteborgs Stad · Intraservice · Skill Viewer &amp; Editor · Claude Anthropic .skills-format</footer>
+
+<script>
+// ── THEME ──────────────────────────────────────────
+function toggleTheme(){
+  const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',t);
+  localStorage.setItem('gs-theme',t);
+}
+(function(){
+  const t=localStorage.getItem('gs-theme')||'light';
+  document.documentElement.setAttribute('data-theme',t);
+})();
+
+// ── TABS ───────────────────────────────────────────
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
+}
+
+// ── STATE ──────────────────────────────────────────
+let SF={};           // path → {content,binary,type}
+let curPath='';
+let curView='rendered';
+let skillFname='';
+
+// ── FILE OPEN ──────────────────────────────────────
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('over');
+  if(e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+}
+function handleFileSelect(e){if(e.target.files[0]) processFile(e.target.files[0]);}
+
+async function processFile(file){
+  skillFname=file.name;
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(['skills','skill','zip'].includes(ext)){
+    await openZip(file);
+  } else if(['md','txt','json','yml','yaml'].includes(ext)){
+    const txt=await rdText(file);
+    SF={'SKILL.md':{content:txt,binary:null,type:'text'}};
+    openViewer(file.name,1,new Blob([txt]).size);
+    selectFile('SKILL.md');
+  } else {
+    alert('Stöds ej. Öppna .skills, .skill, .md eller .zip.');
+  }
+}
+
+function rdText(f){return new Promise((r,rj)=>{const rd=new FileReader();rd.onload=e=>r(e.target.result);rd.onerror=rj;rd.readAsText(f,'UTF-8')});}
+function rdBuf(f){return new Promise((r,rj)=>{const rd=new FileReader();rd.onload=e=>r(e.target.result);rd.onerror=rj;rd.readAsArrayBuffer(f)});}
+
+const TEXT_EXTS=['md','txt','json','yml','yaml','js','py','sh','bash','css','html','xml','csv','ts','jsx','tsx','toml','ini','cfg','conf','rst'];
+const IMG_EXTS=['png','jpg','jpeg','gif','svg','webp'];
+
+async function openZip(file){
+  try{
+    const buf=await rdBuf(file);
+    const zip=await JSZip.loadAsync(buf);
+    SF={};
+    for(const[path,entry] of Object.entries(zip.files)){
+      if(entry.dir) continue;
+      const ext=path.split('.').pop().toLowerCase();
+      if(TEXT_EXTS.includes(ext)){
+        try{SF[path]={content:await entry.async('text'),binary:null,type:'text'};}
+        catch{SF[path]={content:null,binary:null,type:'binary'};}
+      } else {
+        SF[path]={content:null,binary:await entry.async('uint8array'),type:'binary'};
+      }
+    }
+    const total=Object.values(SF).reduce((s,f)=>s+(f.content?new Blob([f.content]).size:(f.binary?f.binary.length:0)),0);
+    openViewer(file.name,Object.keys(SF).length,total);
+    const prio=Object.keys(SF).find(p=>/skill\.md$/i.test(p))||Object.keys(SF)[0];
+    if(prio) selectFile(prio);
+  }catch(err){alert('Kunde inte öppna: '+err.message);}
+}
+
+function openViewer(fname,n,sz){
+  document.getElementById('viewer-empty').classList.add('hidden');
+  document.getElementById('viewer-open').classList.remove('hidden');
+  document.getElementById('sb-fname').textContent=fname;
+  document.getElementById('sb-meta').textContent=n+' filer · '+fmtSz(sz);
+  buildTree();
+}
+
+// ── TREE ───────────────────────────────────────────
+function buildTree(hlPaths){
+  const wrap=document.getElementById('tree-wrap');
+  wrap.innerHTML='';
+  const tree={};
+  for(const path of Object.keys(SF)){
+    const parts=path.split('/');
+    let node=tree;
+    for(let i=0;i<parts.length-1;i++){if(!node[parts[i]])node[parts[i]]={};node=node[parts[i]];}
+    node['__f__'+parts[parts.length-1]]=path;
+  }
+  function rnd(node,depth){
+    const keys=Object.keys(node).sort();
+    // folders first
+    const folders=keys.filter(k=>!k.startsWith('__f__'));
+    const files=keys.filter(k=>k.startsWith('__f__'));
+    for(const k of [...folders,...files]){
+      if(k.startsWith('__f__')){
+        const fp=node[k];
+        const fname=k.replace('__f__','');
+        const el=document.createElement('div');
+        el.className='tree-item'+(fp===curPath?' active':'')+(hlPaths&&hlPaths.includes(fp)?' hl':'');
+        el.dataset.path=fp;
+        el.onclick=()=>selectFile(fp);
+        el.innerHTML=`<span class="tree-indent" style="width:${depth*13}px"></span><span class="ti">${fIcon(fname)}</span><span style="overflow:hidden;text-overflow:ellipsis">${escH(fname)}</span>`;
+        wrap.appendChild(el);
+      } else {
+        const el=document.createElement('div');
+        el.className='tree-item folder';
+        el.innerHTML=`<span class="tree-indent" style="width:${depth*13}px"></span><span class="ti">📁</span><span>${escH(k)}/</span>`;
+        wrap.appendChild(el);
+        rnd(node[k],depth+1);
+      }
+    }
+  }
+  rnd(tree,0);
+}
+
+function fIcon(name){
+  const ext=name.split('.').pop().toLowerCase();
+  const m={md:'📄',txt:'📝',json:'📋',yml:'⚙️',yaml:'⚙️',js:'📜',ts:'📜',jsx:'⚛️',tsx:'⚛️',py:'🐍',sh:'🖥️',bash:'🖥️',css:'🎨',html:'🌐',xml:'📰',csv:'📊',png:'🖼️',jpg:'🖼️',jpeg:'🖼️',gif:'🖼️',svg:'🖼️',webp:'🖼️',pdf:'📕'};
+  return m[ext]||'📎';
+}
+
+// ── SELECT & RENDER ────────────────────────────────
+function selectFile(path){
+  curPath=path;
+  const parts=path.split('/');
+  document.getElementById('breadcrumb').innerHTML=parts.map((p,i)=>i===parts.length-1?`<strong>${escH(p)}</strong>`:`<span>${escH(p)} / </span>`).join('');
+  buildTree();
+  renderFile(path,curView);
+}
+
+function renderFile(path,view){
+  const file=SF[path];
+  if(!file) return;
+  const body=document.getElementById('cbody');
+
+  if(file.type==='binary'){
+    const ext=path.split('.').pop().toLowerCase();
+    if(IMG_EXTS.includes(ext)){
+      const mime=ext==='svg'?'image/svg+xml':`image/${ext==='jpg'?'jpeg':ext}`;
+      const url=URL.createObjectURL(new Blob([file.binary],{type:mime}));
+      body.innerHTML=`<img src="${url}" class="img-preview" alt="${escH(path.split('/').pop())}"><p style="margin-top:8px;font-size:.78rem;color:var(--text-2)">${escH(path)} · ${fmtSz(file.binary.length)}</p>`;
+    } else {
+      body.innerHTML=`<div class="file-info-box"><div class="fib-icon">${fIcon(path.split('/').pop())}</div><div class="fib-row"><span class="fib-k">Fil</span><span class="fib-v">${escH(path.split('/').pop())}</span></div><div class="fib-row"><span class="fib-k">Sökväg</span><span class="fib-v">${escH(path)}</span></div><div class="fib-row"><span class="fib-k">Storlek</span><span class="fib-v">${fmtSz(file.binary.length)}</span></div><div class="fib-row"><span class="fib-k">Typ</span><span class="fib-v">Binärfil · ${escH(path.split('.').pop().toUpperCase())}</span></div></div>`;
+    }
+    return;
+  }
+
+  if(view==='raw'){
+    body.innerHTML=`<div class="raw-view">${escH(file.content)}</div>`;
+    return;
+  }
+
+  const{fm,body:md}=parseFM(file.content);
+  let html='';
+  if(fm&&Object.keys(fm).length){
+    html+=`<div class="fm-box"><div class="fm-lbl">📋 Frontmatter / Metadata</div>`;
+    for(const[k,v] of Object.entries(fm)){
+      html+=`<div class="fm-row"><span class="fm-k">${escH(k)}</span><span class="fm-v">${escH(String(v))}</span></div>`;
+    }
+    html+='</div>';
+  }
+  html+=`<div class="md">${renderMd(md)}</div>`;
+  body.innerHTML=html;
+}
+
+function setView(v){
+  curView=v;
+  document.getElementById('vseg-r').classList.toggle('on',v==='rendered');
+  document.getElementById('vseg-w').classList.toggle('on',v==='raw');
+  if(curPath) renderFile(curPath,v);
+}
+
+// ── SEARCH ─────────────────────────────────────────
+let sTimer;
+function onSearch(q){clearTimeout(sTimer);sTimer=setTimeout(()=>doSearch(q.trim()),200);}
+function doSearch(q){
+  const body=document.getElementById('cbody');
+  if(!q){buildTree();if(curPath)renderFile(curPath,curView);else body.innerHTML='<p style="color:var(--text-2)">Välj en fil till vänster.</p>';return;}
+  const ql=q.toLowerCase();
+  const results=[];
+  for(const[path,file] of Object.entries(SF)){
+    if(file.type!=='text'||!file.content) continue;
+    const hits=[];
+    file.content.split('\n').forEach((line,i)=>{if(line.toLowerCase().includes(ql))hits.push({n:i+1,t:line});});
+    if(hits.length) results.push({path,hits});
+  }
+  buildTree(results.map(r=>r.path));
+  document.getElementById('breadcrumb').innerHTML=`🔍 "<strong>${escH(q)}</strong>" — ${results.length} fil(er)`;
+  if(!results.length){body.innerHTML=`<p style="color:var(--text-2)">Inga träffar för "<strong>${escH(q)}</strong>".</p>`;return;}
+  let html=`<p style="font-size:.78rem;color:var(--text-2);margin-bottom:10px">${results.length} fil(er) med träffar</p>`;
+  for(const r of results){
+    html+=`<div class="sr-item" onclick="selectFile(${JSON.stringify(r.path)})"><div class="sr-path">${fIcon(r.path.split('/').pop())} ${escH(r.path)}</div>`;
+    r.hits.slice(0,3).forEach(h=>{
+      const m=escH(h.t).replace(new RegExp(escH(q).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'),s=>`<mark>${s}</mark>`);
+      html+=`<div class="sr-snip">Rad ${h.n}: ${m.trim()}</div>`;
+    });
+    if(r.hits.length>3)html+=`<div style="font-size:.72rem;color:var(--text-2);margin-top:2px">+${r.hits.length-3} fler</div>`;
+    html+='</div>';
+  }
+  body.innerHTML=html;
+}
+
+// ── ACTIONS ────────────────────────────────────────
+function resetViewer(){
+  SF={};curPath='';skillFname='';
+  document.getElementById('viewer-empty').classList.remove('hidden');
+  document.getElementById('viewer-open').classList.add('hidden');
+  document.getElementById('file-input').value='';
+  document.getElementById('search-input').value='';
+}
+
+function copyContent(){
+  const file=SF[curPath];
+  if(!file||file.type!=='text') return;
+  navigator.clipboard.writeText(file.content).then(()=>{
+    const btn=document.querySelector('[onclick="copyContent()"]');
+    const o=btn.textContent;btn.textContent='✅ Kopierat';setTimeout(()=>btn.textContent=o,1800);
+  });
+}
+
+async function downloadSkillsFile(){
+  if(!Object.keys(SF).length) return;
+  const zip=new JSZip();
+  for(const[path,file] of Object.entries(SF)){
+    if(file.type==='text') zip.file(path,file.content);
+    else if(file.binary) zip.file(path,file.binary);
+  }
+  dlBlob(await zip.generateAsync({type:'blob'}),skillFname||'skill.skills');
+}
+
+function sendToEditor(){
+  const mdPath=Object.keys(SF).find(p=>/skill\.md$/i.test(p))||Object.keys(SF).find(p=>p.endsWith('.md'))||'';
+  const file=mdPath?SF[mdPath]:null;
+  if(file&&file.type==='text'){
+    const{fm,body}=parseFM(file.content);
+    if(fm){
+      document.getElementById('ed-name').value=fm.name||'';
+      document.getElementById('ed-desc').value=fm.description||'';
+      document.getElementById('ed-location').value=fm.location||'';
+    }
+    document.getElementById('skill-editor').value=body;
+  }
+  onEditorChange();switchTab('editor');
+}
+
+// ── EDITOR ─────────────────────────────────────────
+function onEditorChange(){
+  const txt=document.getElementById('skill-editor').value;
+  document.getElementById('ed-chars').textContent=txt.length+' tecken';
+  document.getElementById('ed-lines').textContent=txt.split('\n').length+' rader';
+  const{body}=parseFM(buildSkillMd());
+  document.getElementById('ed-preview').innerHTML=renderMd(body||txt);
+}
+
+function buildSkillMd(){
+  const name=document.getElementById('ed-name').value.trim();
+  const desc=document.getElementById('ed-desc').value.trim();
+  const loc=document.getElementById('ed-location').value.trim();
+  const body=document.getElementById('skill-editor').value;
+  if(!name&&!desc&&!loc) return body;
+  let fm='---\n';
+  if(name) fm+=`name: ${name}\n`;
+  if(desc) fm+=`description: ${desc}\n`;
+  if(loc)  fm+=`location: ${loc}\n`;
+  fm+='---\n\n';
+  return fm+body;
+}
+
+async function downloadFromEditor(){
+  const n=(document.getElementById('ed-name').value.trim()||'skill').replace(/\s+/g,'-').toLowerCase();
+  const content=buildSkillMd();
+  const zip=new JSZip();
+  const folder=zip.folder(n);
+  folder.file('SKILL.md',content);
+  folder.folder('scripts');
+  folder.folder('references');
+  folder.folder('assets');
+  dlBlob(await zip.generateAsync({type:'blob'}),n+'.skills');
+}
+
+function insertTemplate(){
+  const t=`## Syfte
+
+Beskriv vad denna skill löser och för vem.
+
+---
+
+## När ska denna skill användas
+
+Använd när användaren:
+- Nämner [specifika termer] ...
+- Ber om hjälp med [uppgift] ...
+- Bifogar en fil av typen ...
+
+---
+
+## Instruktioner
+
+### Steg 1 — Läs relevanta filer
+
+\`\`\`bash
+cat /mnt/skills/user/min-skill/SKILL.md
+\`\`\`
+
+### Steg 2 — Utför uppgiften
+
+Beskriv hur Claude ska agera, i vilken ordning och vad som är viktigt.
+
+### Steg 3 — Leverera resultat
+
+Beskriv format och kvalitetskrav för output.
+
+---
+
+## Dos & Don'ts
+
+**Gör:**
+- Läs alltid SKILL.md innan start
+- Verifiera output mot krav
+
+**Gör inte:**
+- Gissa filformat utan att kontrollera
+- Hoppa över steg i processen
+
+---
+
+## Exempel
+
+\`\`\`
+Input: ...
+Output: ...
+\`\`\`
+
+---
+
+## Referenser
+
+- Länk 1
+- Länk 2
+`;
+  const el=document.getElementById('skill-editor');
+  if(!el.value.trim()) el.value=t;
+  else{const p=el.selectionStart;el.value=el.value.slice(0,p)+t+el.value.slice(p);}
+  onEditorChange();
+}
+
+function clearEditor(){
+  if(!confirm('Rensa editorn?')) return;
+  ['skill-editor','ed-name','ed-desc','ed-location'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ed-preview').innerHTML='';
+  onEditorChange();
+}
+
+// ── MARKDOWN ───────────────────────────────────────
+function renderMd(raw){
+  if(!raw) return '';
+  let s=escH(raw);
+  s=s.replace(/```[\w]*\n([\s\S]*?)```/g,(_,c)=>`<pre><code>${c.trimEnd()}</code></pre>`);
+  s=s.replace(/`([^`\n]+)`/g,'<code>$1</code>');
+  s=s.replace(/^######\s(.+)$/gm,'<h6>$1</h6>');
+  s=s.replace(/^#####\s(.+)$/gm,'<h5>$1</h5>');
+  s=s.replace(/^####\s(.+)$/gm,'<h4>$1</h4>');
+  s=s.replace(/^###\s(.+)$/gm,'<h3>$1</h3>');
+  s=s.replace(/^##\s(.+)$/gm,'<h2>$1</h2>');
+  s=s.replace(/^#\s(.+)$/gm,'<h1>$1</h1>');
+  s=s.replace(/^---+$/gm,'<hr>');
+  s=s.replace(/^&gt;\s(.+)$/gm,'<blockquote>$1</blockquote>');
+  s=s.replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>');
+  s=s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  s=s.replace(/\*(.+?)\*/g,'<em>$1</em>');
+  s=s.replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+  s=s.replace(/((?:^\|.+\|\n?)+)/gm,block=>{
+    const rows=block.trim().split('\n');
+    let t='<table>';
+    rows.forEach((row,i)=>{
+      if(/^\|[-:| ]+\|$/.test(row.trim())) return;
+      const cells=row.split('|').slice(1,-1).map(c=>c.trim());
+      const tag=i===0?'th':'td';
+      t+='<tr>'+cells.map(c=>`<${tag}>${c}</${tag}>`).join('')+'</tr>';
+    });
+    return t+'</table>';
+  });
+  s=s.replace(/((?:^[-*]\s.+\n?)+)/gm,b=>'<ul>'+b.trim().split('\n').map(l=>`<li>${l.replace(/^[-*]\s/,'')}</li>`).join('')+'</ul>');
+  s=s.replace(/((?:^\d+\.\s.+\n?)+)/gm,b=>'<ol>'+b.trim().split('\n').map(l=>`<li>${l.replace(/^\d+\.\s/,'')}</li>`).join('')+'</ol>');
+  s=s.split('\n\n').map(p=>{
+    p=p.trim();if(!p) return '';
+    if(/^<(h[1-6]|ul|ol|pre|table|blockquote|hr)/.test(p)) return p;
+    return `<p>${p.replace(/\n/g,'<br>')}</p>`;
+  }).join('\n');
+  return s;
+}
+
+// ── FRONTMATTER ────────────────────────────────────
+function parseFM(text){
+  if(!text||!text.trimStart().startsWith('---')) return{fm:null,body:text||''};
+  const lines=text.split('\n');
+  let i=1;const fm={};
+  while(i<lines.length&&lines[i].trim()!=='---'){
+    const m=lines[i].match(/^(\w+):\s*(.*)/);
+    if(m) fm[m[1]]=m[2].trim();
+    i++;
+  }
+  return{fm:Object.keys(fm).length?fm:null,body:lines.slice(i+1).join('\n')};
+}
+
+// ── UTILS ──────────────────────────────────────────
+function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtSz(b){if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';return(b/1048576).toFixed(1)+' MB';}
+function dlBlob(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);}
+</script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<?php
+// Protected from direct HTTP access
+if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) === __FILE__) {
+    http_response_code(403); exit;
+}
+
+return [
+
+    // ── PASSWORD ────────────────────────────────────────
+    // Change to your desired password. Also supports bcrypt hash:
+    //   php -r "echo password_hash('my-password', PASSWORD_BCRYPT);"
+    'password' => 'admin123',
+
+    // ── SESSION ─────────────────────────────────────────
+    // How long login lasts (seconds). Default: 1 month.
+    'session_lifetime' => 2592000,
+
+    // ── APP ─────────────────────────────────────────────
+    'app_name' => 'Skill Manager',
+
+];
