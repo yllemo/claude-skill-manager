@@ -31,6 +31,7 @@ $appName = $cfg['app_name'] ?? APP_NAME;
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<?php favicon_link(); ?>
 <title>Logga in — <?= h($appName) ?></title>
 <?php theme_script(); ?>
 <?php common_css(); ?>

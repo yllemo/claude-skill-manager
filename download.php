@@ -9,6 +9,15 @@ if (!$path) {
 }
 
 $filename = basename($path);
+$ext = strtolower((string)($_GET['ext'] ?? 'skill'));
+if ($ext !== 'zip' && $ext !== 'skill') {
+    $ext = 'skill';
+}
+if ($ext === 'zip') {
+    $stem = pathinfo($filename, PATHINFO_FILENAME);
+    $filename = $stem . '.zip';
+}
+
 header('Content-Type: application/zip');
 header('Content-Disposition: attachment; filename="' . $filename . '"');
 header('Content-Length: ' . filesize($path));

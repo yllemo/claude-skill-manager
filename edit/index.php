@@ -91,7 +91,33 @@ if (!$isNew && $filePath) {
     }
     $skillNameDefault = pathinfo($filename, PATHINFO_FILENAME);
 } else {
-    $initialFiles['SKILL.md'] = "---\nname: \ntitle: \ndescription: \nauthor: \nversion: 1.0\ntags: \n---\n\n# Ny Skill\n\n## Syfte\n\nBeskriv vad denna skill gör och när den används.\n\n## Instruktioner\n\n1. Steg ett\n2. Steg två\n\n## Exempel\n\n```\n# Exempel\n```\n";
+    $initialFiles['SKILL.md'] = <<< 'SKILLMD'
+---
+name:
+title:
+description:
+author:
+version: 1.0.0
+tags:
+---
+
+# Ny skill
+
+## Syfte
+
+Beskriv vad denna skill gör och när den används.
+
+## Instruktioner
+
+1. Steg ett
+2. Steg två
+
+## Exempel
+
+```
+# Exempel
+```
+SKILLMD;
     $skillNameDefault = '';
 }
 
@@ -109,6 +135,7 @@ if (!$defaultEntry && !empty($initialFiles)) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<?php favicon_link('../'); ?>
 <title><?= h($pageTitle) ?> — <?= h(APP_NAME) ?></title>
 <?php theme_script(); ?>
 <?php common_css(); ?>
@@ -117,7 +144,7 @@ html,body{height:100%;overflow:hidden}
 .workspace{flex:1;display:flex;overflow:hidden}
 
 /* SIDEBAR */
-.sidebar{width:220px;flex-shrink:0;background:var(--bg-nav);border-right:1px solid var(--border-l);display:flex;flex-direction:column;overflow:hidden}
+.sidebar{width:248px;flex-shrink:0;background:var(--bg-nav);border-right:1px solid var(--border-l);display:flex;flex-direction:column;overflow:hidden}
 .sb-hdr{padding:10px 12px;border-bottom:1px solid var(--border-l);flex-shrink:0}
 .sb-hdr label{display:block;font-size:.65rem;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
 .skill-name-input{width:100%;padding:5px 8px;border:1px solid var(--border-l);border-radius:var(--r);font:inherit;font-size:.82rem;background:var(--bg);color:var(--text);margin-bottom:7px}
@@ -134,6 +161,13 @@ html,body{height:100%;overflow:hidden}
 [data-theme="dark"] .tree-item.folder{color:#7ec8f0}
 .tree-item .ti{font-size:.8rem;flex-shrink:0}
 .tree-indent{display:inline-block;flex-shrink:0}
+.tree-row{display:flex;align-items:stretch;gap:0;min-width:0;width:100%}
+.tree-row .tree-item{flex:1;min-width:0}
+.tree-item-ops{display:flex;align-items:center;gap:1px;flex-shrink:0;padding-right:4px;opacity:.55}
+.tree-row:hover .tree-item-ops{opacity:1}
+.tree-op-btn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border:1px solid var(--border-l);border-radius:var(--r);background:var(--bg);font-size:.68rem;cursor:pointer;color:var(--text-2)}
+.tree-op-btn:hover{background:var(--bg-nav);color:var(--accent);border-color:var(--accent)}
+.tree-op-btn:disabled{opacity:.35;cursor:not-allowed}
 
 /* EDITOR AREA */
 .editor-area{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
@@ -221,6 +255,8 @@ html,body{height:100%;overflow:hidden}
 
     <div class="etoolbar">
       <span class="etoolbar-label" id="current-file-label">Väljer fil…</span>
+      <button type="button" class="btn btn-sm btn-secondary" id="btn-rename-file" onclick="if(currentFile)renameMoveFile(currentFile)" title="Byt namn eller flytta (sökväg i arkivet)">📂 Namn</button>
+      <button type="button" class="btn btn-sm btn-secondary" id="btn-delete-file" onclick="if(currentFile)removeFile(currentFile)" title="Ta bort fil från arkivet">🗑 Ta bort</button>
       <button type="button" class="btn btn-sm btn-secondary" onclick="insertTemplate()">📋 Mall</button>
       <button type="button" class="btn btn-sm btn-secondary" onclick="formatDoc()">✨ Formatera</button>
       <button type="button" class="btn btn-sm btn-success" onclick="saveSkill()">💾 Spara</button>
@@ -296,6 +332,24 @@ var edits = Object.assign({}, initialFiles);
 var models = {};      // path -> Monaco ITextModel
 var currentFile = null;
 var monacoEditor = null;
+/** Borttagna sökvägar som fortfarande finns i initialFiles (serverladdning) — döljs i träd och sparas inte */
+var removedFromArchive = new Set();
+
+function normalizeArchivePath(name) {
+  if (!name || typeof name !== 'string') return '';
+  name = name.trim().replace(/^\/+/, '').replace(/\\/g, '/');
+  if (!name || name.indexOf('..') !== -1) return '';
+  return name;
+}
+
+function updateFileActionButtons() {
+  var paths = getAllPaths();
+  var n = paths.length;
+  var ren = document.getElementById('btn-rename-file');
+  var del = document.getElementById('btn-delete-file');
+  if (ren) ren.disabled = !currentFile || n === 0;
+  if (del) del.disabled = !currentFile || n <= 1;
+}
 
 // ── LANGUAGE MAP ───────────────────────────────────────
 function getLang(filename) {
@@ -389,6 +443,7 @@ function selectFile(path) {
 
   buildTree(path);
   updatePreview();
+  updateFileActionButtons();
 }
 
 // ── PREVIEW ────────────────────────────────────────────
@@ -410,6 +465,7 @@ function buildTree(active) {
   var wrap = document.getElementById('tree-wrap');
   wrap.innerHTML = '';
   var allPaths = getAllPaths();
+  var pathCount = allPaths.length;
   var tree = {};
   allPaths.forEach(function(path) {
     var parts = path.split('/');
@@ -420,10 +476,10 @@ function buildTree(active) {
     }
     node['__f__' + parts[parts.length - 1]] = path;
   });
-  renderNode(tree, 0, wrap, active);
+  renderNode(tree, 0, wrap, active, pathCount);
 }
 
-function renderNode(node, depth, wrap, active) {
+function renderNode(node, depth, wrap, active, pathCount) {
   var keys    = Object.keys(node).sort();
   var folders = keys.filter(function(k) { return !k.startsWith('__f__'); });
   var files   = keys.filter(function(k) { return  k.startsWith('__f__'); });
@@ -432,15 +488,38 @@ function renderNode(node, depth, wrap, active) {
     el.className = 'tree-item folder';
     el.innerHTML = indent(depth) + '<span class="ti">📁</span><span>' + esc(k) + '/</span>';
     wrap.appendChild(el);
-    renderNode(node[k], depth + 1, wrap, active);
+    renderNode(node[k], depth + 1, wrap, active, pathCount);
   });
   files.forEach(function(k) {
     var fp = node[k], fname = k.replace('__f__', '');
+    var row = document.createElement('div');
+    row.className = 'tree-row';
     var el = document.createElement('div');
     el.className = 'tree-item' + (fp === active ? ' active' : '');
-    el.innerHTML = indent(depth) + '<span class="ti">' + fIcon(fname) + '</span><span style="overflow:hidden;text-overflow:ellipsis">' + esc(fname) + '</span>';
+    el.innerHTML = indent(depth) + '<span class="ti">' + fIcon(fname) + '</span><span style="overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0">' + esc(fname) + '</span>';
     el.onclick = function() { selectFile(fp); };
-    wrap.appendChild(el);
+    var ops = document.createElement('div');
+    ops.className = 'tree-item-ops';
+    var btnRen = document.createElement('button');
+    btnRen.type = 'button';
+    btnRen.className = 'tree-op-btn';
+    btnRen.title = 'Byt namn / flytta';
+    btnRen.setAttribute('aria-label', 'Byt namn');
+    btnRen.textContent = '✏️';
+    btnRen.onclick = function(e) { e.stopPropagation(); renameMoveFile(fp); };
+    var btnDel = document.createElement('button');
+    btnDel.type = 'button';
+    btnDel.className = 'tree-op-btn';
+    btnDel.title = 'Ta bort fil';
+    btnDel.setAttribute('aria-label', 'Ta bort');
+    btnDel.textContent = '🗑';
+    btnDel.onclick = function(e) { e.stopPropagation(); removeFile(fp); };
+    btnDel.disabled = pathCount <= 1;
+    ops.appendChild(btnRen);
+    ops.appendChild(btnDel);
+    row.appendChild(el);
+    row.appendChild(ops);
+    wrap.appendChild(row);
   });
 }
 
@@ -453,10 +532,12 @@ function fIcon(name) {
 // ── GET ALL PATHS (models + unopened edits) ────────────
 function getAllPaths() {
   var paths = {};
-  Object.keys(initialFiles).forEach(function(p) { paths[p] = true; });
+  Object.keys(initialFiles).forEach(function(p) {
+    if (!removedFromArchive.has(p)) paths[p] = true;
+  });
   Object.keys(edits).forEach(function(p) { paths[p] = true; });
   Object.keys(models).forEach(function(p) { paths[p] = true; });
-  return Object.keys(paths).sort();
+  return Object.keys(paths).filter(function(p) { return !removedFromArchive.has(p); }).sort();
 }
 
 function getAllEdits() {
@@ -489,24 +570,122 @@ function saveSkill() {
 function addFile() {
   var name = prompt('Nytt filnamn i arkivet\n(t.ex. references/README.md):');
   if (!name) return;
-  name = name.trim().replace(/^\/+/, '');
-  if (!name) return;
-  if (edits[name] !== undefined || models[name]) { selectFile(name); return; }
+  name = normalizeArchivePath(name);
+  if (!name) { alert('Ogiltigt filnamn.'); return; }
+  if (getAllPaths().indexOf(name) !== -1) { selectFile(name); return; }
+  removedFromArchive.delete(name);
   edits[name] = '';
   buildTree(name);
   selectFile(name);
 }
 
+// ── REMOVE / RENAME FILE ───────────────────────────────
+function removeFile(path) {
+  var all = getAllPaths();
+  if (all.length <= 1) {
+    alert('Arkivet måste innehålla minst en fil.');
+    return;
+  }
+  if (!confirm('Ta bort filen «' + path + '» från arkivet?')) return;
+  var next = all.filter(function(p) { return p !== path; })[0];
+  removedFromArchive.add(path);
+  delete edits[path];
+  if (models[path]) {
+    models[path].dispose();
+    delete models[path];
+  }
+  if (currentFile === path) {
+    selectFile(next);
+  } else {
+    buildTree(currentFile);
+    updateFileActionButtons();
+  }
+}
+
+function renameMoveFile(oldPath) {
+  var name = prompt('Ny sökväg i arkivet (nytt namn eller mapp, t.ex. docs/guide.md):', oldPath);
+  if (name == null) return;
+  name = normalizeArchivePath(name);
+  if (!name) { alert('Ogiltig sökväg.'); return; }
+  if (name === oldPath) return;
+  if (getAllPaths().indexOf(name) !== -1) {
+    alert('Det finns redan en fil med den sökvägen.');
+    return;
+  }
+  var content = '';
+  if (models[oldPath]) {
+    content = models[oldPath].getValue();
+  } else if (edits[oldPath] !== undefined) {
+    content = edits[oldPath];
+  } else if (initialFiles[oldPath] !== undefined) {
+    content = initialFiles[oldPath];
+  }
+  removedFromArchive.add(oldPath);
+  delete edits[oldPath];
+  if (models[oldPath]) {
+    models[oldPath].dispose();
+    delete models[oldPath];
+  }
+  removedFromArchive.delete(name);
+  edits[name] = content;
+  var open = currentFile === oldPath;
+  if (open) {
+    currentFile = name;
+  }
+  buildTree(open ? name : currentFile);
+  if (open) {
+    selectFile(name);
+  } else {
+    updateFileActionButtons();
+  }
+}
+
 // ── TEMPLATE ───────────────────────────────────────────
+// Samma YAML + brödtext som vid ny skill (SKILL.md); övriga filer får en enkel markdown-mall.
+var SKILL_MD_TEMPLATE = [
+  '---',
+  'name:',
+  'title:',
+  'description:',
+  'author:',
+  'version: 1.0.0',
+  'tags:',
+  '---',
+  '',
+  '# Ny skill',
+  '',
+  '## Syfte',
+  '',
+  'Beskriv vad denna skill gör och när den används.',
+  '',
+  '## Instruktioner',
+  '',
+  '1. Steg ett',
+  '2. Steg två',
+  '',
+  '## Exempel',
+  '',
+  '```',
+  '# Exempel',
+  '```',
+  '',
+].join('\n');
+
 function insertTemplate() {
   if (!monacoEditor) return;
   if (monacoEditor.getValue().trim() && !confirm('Ersätt innehållet med mallen?')) return;
-  monacoEditor.setValue([
-    '# Titel','','## Syfte','',
-    'Beskriv vad denna skill gör och när den används.','',
-    '## Instruktioner','','1. Steg ett','2. Steg två','3. Steg tre','',
-    '## Exempel','','```','# Exempelkod','```','','## Anteckningar','','- Viktig notering',
-  ].join('\n'));
+  var fname = (currentFile || '').split('/').pop() || '';
+  var isSkillMd = /^SKILL\.md$/i.test(fname);
+  if (isSkillMd) {
+    monacoEditor.setValue(SKILL_MD_TEMPLATE);
+  } else {
+    monacoEditor.setValue([
+      '# Titel','','## Syfte','',
+      'Beskriv vad denna skill gör och när den används.','',
+      '## Instruktioner','','1. Steg ett','2. Steg två','3. Steg tre','',
+      '## Exempel','','```','# Exempelkod','```','','## Anteckningar','','- Viktig notering',
+    ].join('\n'));
+  }
   monacoEditor.focus();
 }
 

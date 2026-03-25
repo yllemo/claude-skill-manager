@@ -29,6 +29,89 @@ function sanitize_entry(string $name): string {
     return ltrim($name, '/');
 }
 
+/**
+ * Uppladdade .skill / .zip får endast innehålla .md- och .txt-filer.
+ *
+ * @return null om OK, annars felmeddelande
+ */
+function validate_skill_upload_archive(string $zipPath): ?string {
+    if (!class_exists('ZipArchive')) {
+        return 'ZipArchive saknas på servern.';
+    }
+    $zip = new ZipArchive();
+    if ($zip->open($zipPath) !== true) {
+        return 'Kunde inte läsa arkivet.';
+    }
+    $allowed = ['md', 'txt'];
+    $fileCount = 0;
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $name = (string)$zip->getNameIndex($i);
+        if (str_ends_with($name, '/')) {
+            continue;
+        }
+        $fileCount++;
+        $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        if ($ext === '' || !in_array($ext, $allowed, true)) {
+            $zip->close();
+            return 'Otillåten fil i arkivet: ' . $name . ' (endast .md och .txt tillåts vid uppladdning).';
+        }
+    }
+    $zip->close();
+    if ($fileCount === 0) {
+        return 'Arkivet innehåller inga filer.';
+    }
+    return null;
+}
+
+/**
+ * Skapar en .skill-fil i $destSkillPath från en uppladdad .zip (endast .md/.txt kopieras).
+ *
+ * @return null om OK, annars felmeddelande (vid fel raderas $destSkillPath om den skapades)
+ */
+function create_skill_from_uploaded_zip(string $tmpZipPath, string $destSkillPath): ?string {
+    $err = validate_skill_upload_archive($tmpZipPath);
+    if ($err !== null) {
+        return $err;
+    }
+    $allowed = ['md', 'txt'];
+    $zipIn = new ZipArchive();
+    if ($zipIn->open($tmpZipPath) !== true) {
+        return 'Kunde inte läsa zip-filen.';
+    }
+    $zipOut = new ZipArchive();
+    if ($zipOut->open($destSkillPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+        $zipIn->close();
+        return 'Kunde inte skapa .skill-fil.';
+    }
+    $added = 0;
+    for ($i = 0; $i < $zipIn->numFiles; $i++) {
+        $name = (string)$zipIn->getNameIndex($i);
+        if (str_ends_with($name, '/')) {
+            continue;
+        }
+        $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        if (!in_array($ext, $allowed, true)) {
+            continue;
+        }
+        $safe = sanitize_entry($name);
+        if ($safe === '') {
+            continue;
+        }
+        if ($zipOut->addFromString($safe, (string)$zipIn->getFromIndex($i))) {
+            $added++;
+        }
+    }
+    $zipOut->close();
+    $zipIn->close();
+    if ($added === 0) {
+        if (is_file($destSkillPath)) {
+            unlink($destSkillPath);
+        }
+        return 'Inga .md- eller .txt-filer kunde packas.';
+    }
+    return null;
+}
+
 function parse_frontmatter(string $content): array {
     $meta = [];
     $body = $content;
@@ -134,6 +217,12 @@ function h(string $s): string {
     return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+/** Favicon; $pathPrefix '' från projektrot, '../' från view/ eller edit/ */
+function favicon_link(string $pathPrefix = ''): void {
+    $href = $pathPrefix . 'favicon.ico';
+    echo '<link rel="icon" href="' . h($href) . '" type="image/x-icon" sizes="any">' . "\n";
+}
+
 /* ── CSS ─────────────────────────────────────────────── */
 
 function common_css(): void { ?>
@@ -192,7 +281,8 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;colo
 .md p{margin:0 0 10px}
 .md ul,.md ol{margin:0 0 10px 20px}
 .md li{margin-bottom:2px}
-.md a{color:var(--link)}
+.md a{color:var(--link);text-decoration:none}
+.md a:hover{color:var(--accent)}
 .md strong{font-weight:700}
 .md em{font-style:italic}
 .md code{background:var(--bg-nav);border:1px solid var(--border-l);border-radius:3px;padding:1px 4px;font-family:'Consolas','Monaco',monospace;font-size:.83em;color:var(--darkBlue)}

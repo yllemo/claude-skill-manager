@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/../_auth.php';
 require_once __DIR__ . '/../_common.php';
+
+$isAuthed = skill_is_authed();
 
 $filePath = validate_file_param((string)($_GET['file'] ?? ''));
 if (!$filePath) {
@@ -36,12 +39,14 @@ $totalSize = array_sum(array_column($entries, 'size'));
 $skillMeta = get_skill_meta($filePath);
 $title     = $skillMeta['title'] ?: pathinfo($filename, PATHINFO_FILENAME);
 $tags      = !empty($skillMeta['tags']) ? array_map('trim', explode(',', $skillMeta['tags'])) : [];
+$loginBack = 'view/?file=' . rawurlencode($filename);
 ?>
 <!DOCTYPE html>
 <html lang="sv" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<?php favicon_link('../'); ?>
 <title><?= h($title) ?> — <?= h(APP_NAME) ?></title>
 <?php theme_script(); ?>
 <?php common_css(); ?>
@@ -93,6 +98,30 @@ html,body{height:100%;overflow:hidden}
 .sb-v{font-size:.76rem;color:var(--text);word-break:break-word}
 .tag{display:inline-block;background:var(--bg-info);border:1px solid var(--border-l);border-radius:3px;padding:1px 5px;font-size:.66rem;color:var(--text-2);margin:1px}
 
+/* Split-knapp Ladda ner (samma stil som övriga header-knappar) */
+.hdr-split-dl{display:inline-flex;align-items:stretch;vertical-align:middle;position:relative}
+.hdr-split-details{position:relative;display:inline-flex;align-items:stretch}
+.hdr-split-details>summary{list-style:none;cursor:pointer}
+.hdr-split-details>summary::-webkit-details-marker{display:none}
+.hdr-split-main{border-radius:var(--r) 0 0 var(--r)!important;margin:0!important}
+.hdr-split-sum{
+  border-radius:0 var(--r) var(--r) 0!important;margin:0!important;
+  border-left:1px solid rgba(255,255,255,.35)!important;
+  min-width:28px;padding-left:8px!important;padding-right:8px!important;
+  font-size:.72rem!important;line-height:1;
+}
+.hdr-split-details[open]>.hdr-split-sum{background:rgba(255,255,255,.26)!important}
+.hdr-split-menu{
+  position:absolute;right:0;top:calc(100% + 4px);z-index:200;
+  min-width:10rem;background:var(--bg);border:1px solid var(--border-l);
+  border-radius:var(--r);box-shadow:var(--shadow);padding:5px 0;
+}
+.hdr-split-opt{
+  display:block;width:100%;text-align:left;padding:8px 14px;border:none;background:none;
+  font:inherit;font-size:.82rem;cursor:pointer;color:var(--text);
+}
+.hdr-split-opt:hover{background:var(--bg-nav);color:var(--accent)}
+
 @media(max-width:700px){.sidebar{display:none}}
 </style>
 </head>
@@ -107,8 +136,21 @@ html,body{height:100%;overflow:hidden}
   <div class="hdr-title"><?= h($title) ?></div>
   <div class="hdr-actions">
     <a href="../" class="btn btn-white btn-sm">← Tillbaka</a>
+    <?php if ($isAuthed): ?>
     <a href="../edit/?file=<?= urlencode($filename) ?>" class="btn btn-white btn-sm">✏️ Redigera</a>
-    <a href="../download.php?file=<?= urlencode($filename) ?>" class="btn btn-white btn-sm">⬇ Ladda ner</a>
+    <?php else: ?>
+    <a href="../login.php?back=<?= urlencode($loginBack) ?>" class="btn btn-white btn-sm">🔐 Logga in</a>
+    <?php endif; ?>
+    <div class="hdr-split-dl" id="hdr-split-dl" data-dl-file="<?= h($filename) ?>" data-dl-base="../download.php">
+      <a class="btn btn-white btn-sm hdr-split-main" id="view-dl-btn" href="../download.php?file=<?= urlencode($filename) ?>&amp;ext=skill" title="Ladda ner (.skill)">⬇ Ladda ner</a>
+      <details class="hdr-split-details">
+        <summary class="btn btn-white btn-sm hdr-split-sum" aria-label="Välj filformat">▾</summary>
+        <div class="hdr-split-menu" role="menu">
+          <button type="button" class="hdr-split-opt" data-ext="skill" role="menuitem">Som .skill</button>
+          <button type="button" class="hdr-split-opt" data-ext="zip" role="menuitem">Som .zip</button>
+        </div>
+      </details>
+    </div>
     <button class="theme-btn" onclick="toggleTheme()" title="Växla tema">🌓</button>
   </div>
 </header>
@@ -121,7 +163,11 @@ html,body{height:100%;overflow:hidden}
       <div class="sb-title"><?= h($title) ?></div>
       <div class="sb-meta"><?= $numFiles ?> filer · <?= h(fmt_size($totalSize)) ?></div>
       <div class="sb-actions">
+        <?php if ($isAuthed): ?>
         <a href="../edit/?file=<?= urlencode($filename) ?>" class="btn btn-xs btn-teal">✏️ Redigera</a>
+        <?php else: ?>
+        <a href="../login.php?back=<?= urlencode($loginBack) ?>" class="btn btn-xs btn-teal">🔐 Logga in</a>
+        <?php endif; ?>
         <a href="../" class="btn btn-xs btn-secondary">← Start</a>
       </div>
     </div>
@@ -354,6 +400,32 @@ function fmtSz(b) {
 // Init
 buildTree('');
 selectFile(<?= json_encode($defaultEntry) ?>);
+</script>
+<script>
+(function(){
+  var wrap = document.getElementById('hdr-split-dl');
+  if (!wrap) return;
+  var base = wrap.getAttribute('data-dl-base') || 'download.php';
+  var fname = wrap.getAttribute('data-dl-file');
+  wrap.addEventListener('click', function(e) {
+    var opt = e.target.closest('.hdr-split-opt');
+    if (!opt) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var a = document.getElementById('view-dl-btn');
+    var ext = opt.getAttribute('data-ext');
+    if (!a || !fname || !ext) return;
+    a.href = base + '?file=' + encodeURIComponent(fname) + '&ext=' + encodeURIComponent(ext);
+    a.title = ext === 'zip' ? 'Ladda ner (.zip)' : 'Ladda ner (.skill)';
+    var det = wrap.querySelector('.hdr-split-details');
+    if (det) det.open = false;
+  });
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('#hdr-split-dl')) return;
+    var det = wrap.querySelector('.hdr-split-details');
+    if (det) det.open = false;
+  });
+})();
 </script>
 </body>
 </html>

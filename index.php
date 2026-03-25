@@ -3,7 +3,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/_auth.php';
 require_once __DIR__ . '/_common.php';
 
-skill_require_auth('login.php');
+$isAuthed = skill_is_authed();
 
 if (!is_dir(CONTENT_DIR)) {
     mkdir(CONTENT_DIR, 0755, true);
@@ -12,8 +12,11 @@ if (!is_dir(CONTENT_DIR)) {
 $msg     = '';
 $msgType = 'success';
 
-/* ── POST-hantering ─────────────────────────────────── */
+/* ── POST-hantering (kräver inloggning) ───────────────── */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$isAuthed) {
+        skill_require_auth('login.php');
+    }
     $action = $_POST['action'] ?? '';
 
     if ($action === 'upload' && isset($_FILES['skill_file'])) {
@@ -24,13 +27,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $fname  = sanitize_filename((string)$f['name']);
                 $target = CONTENT_DIR . $fname;
                 if (move_uploaded_file((string)$f['tmp_name'], $target)) {
-                    $msg = "Filen <strong>" . h($fname) . "</strong> laddades upp.";
+                    $vErr = validate_skill_upload_archive($target);
+                    if ($vErr !== null) {
+                        unlink($target);
+                        $msg     = $vErr;
+                        $msgType = 'error';
+                    } else {
+                        $msg = "Filen <strong>" . h($fname) . "</strong> laddades upp.";
+                    }
                 } else {
                     $msg = "Kunde inte spara filen. Kontrollera rättigheter på /content/.";
                     $msgType = 'error';
                 }
+            } elseif ($ext === 'zip') {
+                $fname  = sanitize_filename((string)$f['name']);
+                $target = CONTENT_DIR . $fname;
+                $zErr   = create_skill_from_uploaded_zip((string)$f['tmp_name'], $target);
+                if ($zErr !== null) {
+                    $msg     = $zErr;
+                    $msgType = 'error';
+                } else {
+                    $msg = "Zip-filen sparades som <strong>" . h($fname) . "</strong> (endast .md och .txt ingår).";
+                }
             } else {
-                $msg = "Endast .skill-filer tillåts.";
+                $msg     = "Endast .skill- eller .zip-filer tillåts.";
                 $msgType = 'error';
             }
         } else {
@@ -83,6 +103,7 @@ $skillsJson = array_map(fn($s) => [
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<?php favicon_link(); ?>
 <title><?= h(APP_NAME) ?></title>
 <?php theme_script(); ?>
 <?php common_css(); ?>
@@ -140,14 +161,36 @@ html, body { height: auto; overflow: auto; }
 
 .col-title { min-width: 160px; }
 .col-title a { color: var(--accent); font-weight: 600; text-decoration: none; }
-.col-title a:hover { text-decoration: underline; }
 .col-title .row-desc { font-size: .74rem; color: var(--text-2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px; }
 .col-tags { min-width: 100px; }
 .tag { display: inline-block; background: var(--bg-info); border: 1px solid var(--border-l); border-radius: 3px; padding: 1px 6px; font-size: .67rem; color: var(--text-2); margin: 1px; cursor: pointer; }
 .tag:hover { border-color: var(--accent); color: var(--accent); }
 .col-meta { color: var(--text-2); white-space: nowrap; font-size: .76rem; }
 .col-actions { white-space: nowrap; text-align: right; }
-.col-actions .actions-wrap { display: flex; gap: 4px; justify-content: flex-end; }
+.col-actions .actions-wrap { display: flex; gap: 4px; justify-content: flex-end; align-items: center; }
+/* Split-knapp: ladda ner + val av .skill / .zip */
+.split-dl { display: inline-flex; align-items: stretch; vertical-align: middle; position: relative; }
+.split-dl-details { position: relative; display: inline-flex; align-items: stretch; }
+.split-dl-details > summary { list-style: none; cursor: pointer; }
+.split-dl-details > summary::-webkit-details-marker { display: none; }
+.split-dl-main { border-radius: var(--r) 0 0 var(--r) !important; margin: 0 !important; }
+.split-dl-sum {
+  border-radius: 0 var(--r) var(--r) 0 !important; margin: 0 !important;
+  border-left: 1px solid var(--border-l) !important;
+  min-width: 22px; padding-left: 5px !important; padding-right: 5px !important;
+  font-size: .65rem !important; line-height: 1;
+}
+.split-dl-details[open] > .split-dl-sum { background: var(--bg-nav) !important; }
+.split-dl-menu {
+  position: absolute; right: 0; top: calc(100% + 3px); z-index: 200;
+  min-width: 7.5rem; background: var(--bg); border: 1px solid var(--border-l);
+  border-radius: var(--r); box-shadow: var(--shadow); padding: 4px 0;
+}
+.split-dl-opt {
+  display: block; width: 100%; text-align: left; padding: 6px 12px; border: none;
+  background: none; font: inherit; font-size: .76rem; cursor: pointer; color: var(--text);
+}
+.split-dl-opt:hover { background: var(--bg-nav); color: var(--accent); }
 
 /* TOM STATE */
 .empty-state { text-align: center; padding: 48px 24px; color: var(--text-2); }
@@ -170,10 +213,14 @@ html, body { height: auto; overflow: auto; }
     <div class="logo-text"><?= h(APP_NAME) ?><span class="logo-sub">.skill filer</span></div>
   </a>
   <div class="hdr-sep"></div>
-  <div class="hdr-title">Hantera skills</div>
+  <div class="hdr-title"><?= $isAuthed ? 'Hantera skills' : 'Översikt' ?></div>
   <div class="hdr-actions">
+    <?php if ($isAuthed): ?>
     <a href="edit/" class="btn btn-white btn-sm">✏️ Ny skill</a>
     <a href="logout.php" class="btn btn-white btn-sm" onclick="return confirm('Logga ut?')">🔓 Logga ut</a>
+    <?php else: ?>
+    <a href="login.php" class="btn btn-white btn-sm">🔐 Logga in</a>
+    <?php endif; ?>
     <button class="theme-btn" onclick="toggleTheme()" title="Växla tema">🌓</button>
   </div>
 </header>
@@ -208,13 +255,15 @@ html, body { height: auto; overflow: auto; }
       <option value="size-desc">Storlek ↓</option>
     </select>
 
+    <?php if ($isAuthed): ?>
     <!-- UPLOAD INLINE -->
     <form method="POST" enctype="multipart/form-data" id="upload-form" class="upload-inline">
       <input type="hidden" name="action" value="upload">
-      <input type="file" name="skill_file" id="file-input" accept=".skill"
+      <input type="file" name="skill_file" id="file-input" accept=".skill,.zip,application/zip"
              onchange="document.getElementById('upload-form').submit()">
-      <label for="file-input" class="upload-label">⬆ Ladda upp .skill</label>
+      <label for="file-input" class="upload-label" title="Endast .md och .txt i arkiven">⬆ Ladda upp .skill / .zip</label>
     </form>
+    <?php endif; ?>
   </div>
 
   <!-- RESULTAT-RAD -->
@@ -223,7 +272,7 @@ html, body { height: auto; overflow: auto; }
   <?php if (empty($skills)): ?>
   <div class="empty-state">
     <div class="ei">🗂️</div>
-    <p>Inga .skill-filer hittades.<br>Ladda upp en befintlig eller <a href="edit/">skapa en ny</a>.</p>
+    <p>Inga .skill-filer hittades.<?php if ($isAuthed): ?><br>Ladda upp en befintlig eller <a href="edit/">skapa en ny</a>.<?php endif; ?></p>
   </div>
   <?php else: ?>
 
@@ -275,14 +324,25 @@ html, body { height: auto; overflow: auto; }
       <td class="col-actions">
         <div class="actions-wrap">
           <a href="view/?file=<?= urlencode($fname) ?>"     class="btn btn-xs btn-primary">👁 Visa</a>
+          <div class="split-dl" data-dl-file="<?= h($fname) ?>">
+            <a class="btn btn-xs btn-secondary split-dl-main" href="download.php?file=<?= urlencode($fname) ?>&amp;ext=skill" title="Ladda ner (.skill)">⬇</a>
+            <details class="split-dl-details">
+              <summary class="btn btn-xs btn-secondary split-dl-sum" aria-label="Välj filformat">▾</summary>
+              <div class="split-dl-menu" role="menu">
+                <button type="button" class="split-dl-opt" data-ext="skill" role="menuitem">Som .skill</button>
+                <button type="button" class="split-dl-opt" data-ext="zip" role="menuitem">Som .zip</button>
+              </div>
+            </details>
+          </div>
+          <?php if ($isAuthed): ?>
           <a href="edit/?file=<?= urlencode($fname) ?>"     class="btn btn-xs btn-teal">✏️</a>
-          <a href="download.php?file=<?= urlencode($fname) ?>" class="btn btn-xs btn-secondary">⬇</a>
           <form method="POST" style="display:inline"
                 onsubmit="return confirm('Radera <?= h(addslashes($title)) ?>?')">
             <input type="hidden" name="action" value="delete">
             <input type="hidden" name="file"   value="<?= h($fname) ?>">
             <button type="submit" class="btn btn-xs btn-danger">🗑</button>
           </form>
+          <?php endif; ?>
         </div>
       </td>
     </tr>
@@ -395,6 +455,37 @@ function setTagFilter(tag) {
   applyFilters();
   document.getElementById('search-input').focus();
 }
+
+function buildDownloadHref(fname, ext) {
+  return 'download.php?file=' + encodeURIComponent(fname) + '&ext=' + encodeURIComponent(ext);
+}
+document.getElementById('skill-tbody').addEventListener('click', function(e) {
+  var opt = e.target.closest('.split-dl-opt');
+  if (!opt) return;
+  e.preventDefault();
+  e.stopPropagation();
+  var wrap = opt.closest('.split-dl');
+  if (!wrap) return;
+  var fname = wrap.getAttribute('data-dl-file');
+  var a = wrap.querySelector('.split-dl-main');
+  var ext = opt.getAttribute('data-ext');
+  if (!a || !fname || !ext) return;
+  a.href = buildDownloadHref(fname, ext);
+  a.title = ext === 'zip' ? 'Ladda ner (.zip)' : 'Ladda ner (.skill)';
+  var det = wrap.querySelector('.split-dl-details');
+  if (det) det.open = false;
+});
+document.getElementById('skill-tbody').addEventListener('toggle', function(e) {
+  var t = e.target;
+  if (!t.classList || !t.classList.contains('split-dl-details') || !t.open) return;
+  document.querySelectorAll('#skill-tbody .split-dl-details[open]').forEach(function(d) {
+    if (d !== t) d.open = false;
+  });
+}, true);
+document.addEventListener('click', function(e) {
+  if (e.target.closest('.split-dl')) return;
+  document.querySelectorAll('#skill-tbody .split-dl-details[open]').forEach(function(d) { d.open = false; });
+});
 
 // Init
 applyFilters();
