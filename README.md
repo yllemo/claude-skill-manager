@@ -10,10 +10,12 @@ A professional PHP-based web application for creating, editing, and managing `.s
 
 ## 🚀 Latest Updates
 
-- ✨ **Enhanced User Interface** — Improved styling and user experience
-- 🎨 **Custom Favicon** — Professional branding with custom icon
-- 🔧 **Code Improvements** — Optimized performance and functionality
-- 📱 **Mobile Responsiveness** — Better mobile and tablet experience
+- 🧩 **MCP Server Added** — New `mcp/index.php` endpoint with JSON-RPC tools for AI clients
+- 🧪 **MCP Test Panel** — New `mcp/test.php` for interactive endpoint testing
+- 📘 **MCP Documentation** — New `MCP.md` with protocol and usage details
+- 🌍 **Public Dashboard View** — Overview and view/download actions now available without login
+- 🔐 **Role-Based Actions** — Edit/delete/upload/new skill actions stay protected behind login
+- 📦 **Safer Upload Rules** — `.skill` and `.zip` uploads allowed, but archive content restricted to `.md` and `.txt`
 
 ## ✨ Features
 
@@ -42,13 +44,17 @@ skill/
 ├── index.php           # Dashboard — searchable skill library with upload
 ├── login.php           # Authentication page  
 ├── logout.php          # Logout handler
-├── download.php        # Serves .skill files for download
+├── download.php        # Serves downloads as .skill or .zip (filename extension option)
 ├── favicon.ico         # Custom favicon for the application
 ├── _common.php         # Shared functions, CSS and helpers
 ├── _auth.php           # Session authentication
+├── MCP.md              # AI-focused MCP documentation
 ├── config/
 │   ├── config.php      # Password and settings
 │   └── .htaccess       # Blocks direct HTTP access to /config/
+├── mcp/
+│   ├── index.php       # MCP JSON-RPC endpoint
+│   └── test.php        # MCP web test panel
 ├── view/
 │   └── index.php       # Skill viewer — file tree, render markdown
 ├── edit/
@@ -60,12 +66,17 @@ skill/
 ## 🖥️ Application Pages
 
 ### 🏠 Dashboard (`/`)
-**Requires authentication.**
+**Public overview (no login required).**
 - Searchable and sortable table of all `.skill` files
 - Filter by tags via dropdown or click on tag in list
 - Columns: title, description, tags, author, file count, size, modified
-- Drag-and-drop upload of existing `.skill` files
-- Actions per row: View · Edit · Download · Delete
+- Upload (authenticated): accepts `.skill` and `.zip`
+- Upload validation: archives may only contain `.md` and `.txt`
+- `.zip` upload conversion: automatically creates `.skill` in `/content`
+- Actions by auth state:
+  - Guest: View, Download
+  - Authenticated: View, Download, Edit, Delete
+- Download button includes dropdown format choice (`.skill` or `.zip`)
 
 ### 👁️ Skill Viewer (`/view/?file=name.skill`)
 **Public access — no authentication required.**
@@ -74,6 +85,8 @@ skill/
 - Sidebar shows frontmatter metadata, tags, and file info
 - Toggle between rendered view and raw text
 - Copy button for file contents
+- Edit button shown only when authenticated (guests see Login button instead)
+- Download button includes format dropdown (`.skill` / `.zip`)
 
 ### ✏️ Skill Editor (`/edit/?file=name.skill` or `/edit/` for new)
 **Requires authentication.**
@@ -81,9 +94,20 @@ skill/
 - File tree sidebar — click to switch files, each file has its own undo/redo
 - Live preview with Mermaid diagram support
 - Add new files to archive via `+ File` button
+- Rename/move files inside archive
+- Delete files inside archive
 - Binary files (images etc.) preserved when saving
-- Template button for SKILL.md structure 
+- Template button for `SKILL.md` inserts YAML frontmatter with metadata (including `author` and `tags`)
 - Help button (`?`) shows `skill-intro.md` as modal
+
+### 🤖 MCP Endpoint (`/mcp/index.php`)
+**Public read endpoint for AI clients (JSON-RPC style).**
+- Methods: `initialize`, `tools/list`, `tools/call`, `ping`
+- Tools:
+  - `list_skills`
+  - `read_skill`
+  - `search_skills`
+- See [`MCP.md`](MCP.md) for payload examples and integration details
 
 ## 📦 .skill File Format
 

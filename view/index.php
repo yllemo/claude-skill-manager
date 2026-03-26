@@ -98,27 +98,20 @@ html,body{height:100%;overflow:hidden}
 .sb-v{font-size:.76rem;color:var(--text);word-break:break-word}
 .tag{display:inline-block;background:var(--bg-info);border:1px solid var(--border-l);border-radius:3px;padding:1px 5px;font-size:.66rem;color:var(--text-2);margin:1px}
 
-/* Split-knapp Ladda ner (samma stil som övriga header-knappar) */
-.hdr-split-dl{display:inline-flex;align-items:stretch;vertical-align:middle;position:relative}
-.hdr-split-details{position:relative;display:inline-flex;align-items:stretch}
-.hdr-split-details>summary{list-style:none;cursor:pointer}
-.hdr-split-details>summary::-webkit-details-marker{display:none}
-.hdr-split-main{border-radius:var(--r) 0 0 var(--r)!important;margin:0!important}
-.hdr-split-sum{
-  border-radius:0 var(--r) var(--r) 0!important;margin:0!important;
-  border-left:1px solid rgba(255,255,255,.35)!important;
-  min-width:28px;padding-left:8px!important;padding-right:8px!important;
-  font-size:.72rem!important;line-height:1;
-}
-.hdr-split-details[open]>.hdr-split-sum{background:rgba(255,255,255,.26)!important}
+/* En knapp med dropdown för nedladdning */
+.hdr-split-dl{position:relative;display:inline-block}
+.hdr-split-dl>summary{list-style:none;cursor:pointer}
+.hdr-split-dl>summary::-webkit-details-marker{display:none}
+.hdr-split-btn{margin:0!important}
+.hdr-split-dl[open]>.hdr-split-btn{background:rgba(255,255,255,.26)!important}
 .hdr-split-menu{
   position:absolute;right:0;top:calc(100% + 4px);z-index:200;
   min-width:10rem;background:var(--bg);border:1px solid var(--border-l);
   border-radius:var(--r);box-shadow:var(--shadow);padding:5px 0;
 }
 .hdr-split-opt{
-  display:block;width:100%;text-align:left;padding:8px 14px;border:none;background:none;
-  font:inherit;font-size:.82rem;cursor:pointer;color:var(--text);
+  display:block;width:100%;text-align:left;padding:8px 14px;text-decoration:none;
+  font:inherit;font-size:.82rem;color:var(--text);
 }
 .hdr-split-opt:hover{background:var(--bg-nav);color:var(--accent)}
 
@@ -141,16 +134,13 @@ html,body{height:100%;overflow:hidden}
     <?php else: ?>
     <a href="../login.php?back=<?= urlencode($loginBack) ?>" class="btn btn-white btn-sm">🔐 Logga in</a>
     <?php endif; ?>
-    <div class="hdr-split-dl" id="hdr-split-dl" data-dl-file="<?= h($filename) ?>" data-dl-base="../download.php">
-      <a class="btn btn-white btn-sm hdr-split-main" id="view-dl-btn" href="../download.php?file=<?= urlencode($filename) ?>&amp;ext=skill" title="Ladda ner (.skill)">⬇ Ladda ner</a>
-      <details class="hdr-split-details">
-        <summary class="btn btn-white btn-sm hdr-split-sum" aria-label="Välj filformat">▾</summary>
-        <div class="hdr-split-menu" role="menu">
-          <button type="button" class="hdr-split-opt" data-ext="skill" role="menuitem">Som .skill</button>
-          <button type="button" class="hdr-split-opt" data-ext="zip" role="menuitem">Som .zip</button>
-        </div>
-      </details>
-    </div>
+    <details class="hdr-split-dl" id="hdr-split-dl">
+      <summary class="btn btn-white btn-sm hdr-split-btn" aria-label="Ladda ner">⬇ Ladda ner ▾</summary>
+      <div class="hdr-split-menu" role="menu">
+        <a class="hdr-split-opt" href="../download.php?file=<?= urlencode($filename) ?>&amp;ext=skill" role="menuitem">Som .skill</a>
+        <a class="hdr-split-opt" href="../download.php?file=<?= urlencode($filename) ?>&amp;ext=zip" role="menuitem">Som .zip</a>
+      </div>
+    </details>
     <button class="theme-btn" onclick="toggleTheme()" title="Växla tema">🌓</button>
   </div>
 </header>
@@ -405,25 +395,9 @@ selectFile(<?= json_encode($defaultEntry) ?>);
 (function(){
   var wrap = document.getElementById('hdr-split-dl');
   if (!wrap) return;
-  var base = wrap.getAttribute('data-dl-base') || 'download.php';
-  var fname = wrap.getAttribute('data-dl-file');
-  wrap.addEventListener('click', function(e) {
-    var opt = e.target.closest('.hdr-split-opt');
-    if (!opt) return;
-    e.preventDefault();
-    e.stopPropagation();
-    var a = document.getElementById('view-dl-btn');
-    var ext = opt.getAttribute('data-ext');
-    if (!a || !fname || !ext) return;
-    a.href = base + '?file=' + encodeURIComponent(fname) + '&ext=' + encodeURIComponent(ext);
-    a.title = ext === 'zip' ? 'Ladda ner (.zip)' : 'Ladda ner (.skill)';
-    var det = wrap.querySelector('.hdr-split-details');
-    if (det) det.open = false;
-  });
   document.addEventListener('click', function(e) {
     if (e.target.closest('#hdr-split-dl')) return;
-    var det = wrap.querySelector('.hdr-split-details');
-    if (det) det.open = false;
+    wrap.open = false;
   });
 })();
 </script>
