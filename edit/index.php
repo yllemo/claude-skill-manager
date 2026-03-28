@@ -200,11 +200,74 @@ html,body{height:100%;overflow:hidden}
 
 @media(max-width:900px){.emain{grid-template-columns:1fr}.eright{display:none}}
 @media(max-width:660px){.sidebar{display:none}}
+
+/* MOBILE RESPONSIVE FOR SIDEBAR */
+@media(max-width: 768px) {
+  .sidebar{
+    position:fixed;
+    top:54px;
+    left:-280px;
+    width:280px;
+    height:calc(100vh - 54px);
+    z-index:1000;
+    transition:left .3s ease;
+    display:flex!important;
+  }
+  .sidebar.mobile-hidden{
+    left:-280px;
+  }
+  .sidebar:not(.mobile-hidden){
+    left:0;
+  }
+  .sidebar-overlay{
+    position:fixed;
+    top:54px;
+    left:0;
+    right:0;
+    bottom:0;
+    background:rgba(0,0,0,.5);
+    z-index:999;
+    display:none;
+  }
+  .editor-area{
+    width:100%;
+  }
+  .etoolbar{
+    padding:0 10px;
+  }
+  .sidebar-toggle{
+    display:flex!important;
+  }
+  .help-btn{
+    display:none!important;
+  }
+}
+
+/* SIDEBAR TOGGLE BUTTON */
+.sidebar-toggle{
+  display:none;
+  align-items:center;
+  gap:4px;
+  padding:4px 8px;
+  font-size:.75rem;
+  border-radius:var(--r);
+  background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.28);
+  color:#fff;
+  cursor:pointer;
+  transition:background .15s;
+}
+.sidebar-toggle:hover{
+  background:rgba(255,255,255,.22);
+}
 </style>
 </head>
 <body>
 
 <header class="header">
+  <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Visa verktyg">
+    🛠️ Verktyg
+  </button>
   <a href="../" style="display:flex;align-items:center;gap:10px;text-decoration:none">
     <div class="logo-mark">📘</div>
     <div class="logo-text"><?= h(APP_NAME) ?><span class="logo-sub"><?= $isNew ? 'Ny skill' : 'Redigera' ?></span></div>
@@ -219,13 +282,64 @@ html,body{height:100%;overflow:hidden}
     <a href="../logout.php" class="btn btn-white btn-sm" onclick="return confirm('Logga ut?')">🔓 Logga ut</a>
     <button class="help-btn" onclick="openHelp()" title="Vad är en .skill-fil?">?</button>
     <button class="theme-btn" onclick="toggleTheme()" title="Växla tema">🌓</button>
+    <button class="hamburger-btn" onclick="toggleMobileNav()" aria-label="Meny">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
   </div>
 </header>
+
+<!-- Mobile Navigation -->
+<div class="mobile-nav-overlay" onclick="closeMobileNav()"></div>
+<nav class="mobile-nav">
+  <div class="mobile-nav-header">
+    <div class="mobile-nav-title"><?= h(APP_NAME) ?></div>
+    <div class="mobile-nav-subtitle">Navigation</div>
+  </div>
+  <div class="mobile-nav-section">
+    <a href="../" class="mobile-nav-item">
+      <span class="icon">←</span>
+      <span>Tillbaka</span>
+    </a>
+    <a href="javascript:void(0)" onclick="toggleSidebar(); closeMobileNav();" class="mobile-nav-item">
+      <span class="icon">🛠️</span>
+      <span>Visa verktyg</span>
+    </a>
+    <?php if (!$isNew): ?>
+    <a href="../view/?file=<?= urlencode($filename) ?>" class="mobile-nav-item">
+      <span class="icon">👁</span>
+      <span>Visa skill</span>
+    </a>
+    <?php endif; ?>
+    <a href="javascript:void(0)" onclick="saveSkill(); closeMobileNav();" class="mobile-nav-item">
+      <span class="icon">💾</span>
+      <span>Spara</span>
+    </a>
+  </div>
+  <div class="mobile-nav-section" style="border-top: 1px solid var(--border-l); padding-top: 8px;">
+    <a href="../logout.php" class="mobile-nav-item" onclick="return confirm('Logga ut?')">
+      <span class="icon">🔓</span>
+      <span>Logga ut</span>
+    </a>
+    <a href="javascript:void(0)" onclick="openHelp(); closeMobileNav();" class="mobile-nav-item">
+      <span class="icon">?</span>
+      <span>Hjälp</span>
+    </a>
+    <a href="javascript:void(0)" onclick="toggleTheme(); closeMobileNav();" class="mobile-nav-item">
+      <span class="icon">🌓</span>
+      <span>Växla tema</span>
+    </a>
+  </div>
+</nav>
+
+<!-- Sidebar Overlay for mobile -->
+<div class="sidebar-overlay"></div>
 
 <div class="workspace">
 
   <!-- SIDEBAR -->
-  <div class="sidebar">
+  <div class="sidebar mobile-hidden" id="sidebar">
     <div class="sb-hdr">
       <label>Filnamn (.skill)</label>
       <input type="text" id="skill-name-input" class="skill-name-input"

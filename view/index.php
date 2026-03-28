@@ -116,11 +116,77 @@ html,body{height:100%;overflow:hidden}
 .hdr-split-opt:hover{background:var(--bg-nav);color:var(--accent)}
 
 @media(max-width:700px){.sidebar{display:none}}
+
+/* MOBILE RESPONSIVE FOR SIDEBAR */
+@media(max-width: 768px) {
+  .sidebar{
+    position:fixed;
+    top:54px;
+    left:-280px;
+    width:280px;
+    height:calc(100vh - 54px);
+    z-index:1000;
+    transition:left .3s ease;
+    display:flex!important;
+  }
+  .sidebar.mobile-hidden{
+    left:-280px;
+  }
+  .sidebar:not(.mobile-hidden){
+    left:0;
+  }
+  .sidebar-overlay{
+    position:fixed;
+    top:54px;
+    left:0;
+    right:0;
+    bottom:0;
+    background:rgba(0,0,0,.5);
+    z-index:999;
+    display:none;
+  }
+  .content-main{
+    width:100%;
+  }
+  .ctoolbar{
+    padding:0 10px;
+  }
+  .cbody{
+    padding:16px;
+  }
+  .sidebar-toggle{
+    display:flex!important;
+  }
+  .hdr-split-dl{
+    display:none!important;
+  }
+}
+
+/* SIDEBAR TOGGLE BUTTON */
+.sidebar-toggle{
+  display:none;
+  align-items:center;
+  gap:4px;
+  padding:4px 8px;
+  font-size:.75rem;
+  border-radius:var(--r);
+  background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.28);
+  color:#fff;
+  cursor:pointer;
+  transition:background .15s;
+}
+.sidebar-toggle:hover{
+  background:rgba(255,255,255,.22);
+}
 </style>
 </head>
 <body>
 
 <header class="header">
+  <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Visa filträd">
+    📁 Filer
+  </button>
   <a href="../" style="display:flex;align-items:center;gap:10px;text-decoration:none">
     <div class="logo-mark">📘</div>
     <div class="logo-text"><?= h(APP_NAME) ?><span class="logo-sub">Visa skill</span></div>
@@ -142,13 +208,65 @@ html,body{height:100%;overflow:hidden}
       </div>
     </details>
     <button class="theme-btn" onclick="toggleTheme()" title="Växla tema">🌓</button>
+    <button class="hamburger-btn" onclick="toggleMobileNav()" aria-label="Meny">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
   </div>
 </header>
+
+<!-- Mobile Navigation -->
+<div class="mobile-nav-overlay" onclick="closeMobileNav()"></div>
+<nav class="mobile-nav">
+  <div class="mobile-nav-header">
+    <div class="mobile-nav-title"><?= h(APP_NAME) ?></div>
+    <div class="mobile-nav-subtitle">Navigation</div>
+  </div>
+  <div class="mobile-nav-section">
+    <a href="../" class="mobile-nav-item">
+      <span class="icon">←</span>
+      <span>Tillbaka</span>
+    </a>
+    <a href="javascript:void(0)" onclick="toggleSidebar(); closeMobileNav();" class="mobile-nav-item">
+      <span class="icon">📁</span>
+      <span>Visa filträd</span>
+    </a>
+    <?php if ($isAuthed): ?>
+    <a href="../edit/?file=<?= urlencode($filename) ?>" class="mobile-nav-item">
+      <span class="icon">✏️</span>
+      <span>Redigera</span>
+    </a>
+    <?php else: ?>
+    <a href="../login.php?back=<?= urlencode($loginBack) ?>" class="mobile-nav-item">
+      <span class="icon">🔐</span>
+      <span>Logga in</span>
+    </a>
+    <?php endif; ?>
+  </div>
+  <div class="mobile-nav-section" style="border-top: 1px solid var(--border-l); padding-top: 8px;">
+    <a href="../download.php?file=<?= urlencode($filename) ?>&amp;ext=skill" class="mobile-nav-item">
+      <span class="icon">⬇️</span>
+      <span>Ladda ner som .skill</span>
+    </a>
+    <a href="../download.php?file=<?= urlencode($filename) ?>&amp;ext=zip" class="mobile-nav-item">
+      <span class="icon">📦</span>
+      <span>Ladda ner som .zip</span>
+    </a>
+    <a href="javascript:void(0)" onclick="toggleTheme(); closeMobileNav();" class="mobile-nav-item">
+      <span class="icon">🌓</span>
+      <span>Växla tema</span>
+    </a>
+  </div>
+</nav>
+
+<!-- Sidebar Overlay for mobile -->
+<div class="sidebar-overlay"></div>
 
 <div class="workspace">
 
   <!-- SIDEBAR -->
-  <div class="sidebar">
+  <div class="sidebar mobile-hidden"  id="sidebar">
     <div class="sb-hdr">
       <div class="sb-title"><?= h($title) ?></div>
       <div class="sb-meta"><?= $numFiles ?> filer · <?= h(fmt_size($totalSize)) ?></div>

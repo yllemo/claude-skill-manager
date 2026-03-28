@@ -192,6 +192,10 @@ html, body { height: auto; overflow: auto; }
   .col-meta, .col-tags { display: none; }
   .toolbar { gap: 6px; }
   .main { padding: 12px; }
+  .skill-table td { padding: 6px 8px; }
+  .col-title a { font-size: .85rem; }
+  .col-actions .actions-wrap { gap: 3px; }
+  .split-dl-btn { padding: 2px 6px !important; font-size: .7rem !important; }
 }
 </style>
 </head>
@@ -212,8 +216,47 @@ html, body { height: auto; overflow: auto; }
     <a href="login.php" class="btn btn-white btn-sm">🔐 Logga in</a>
     <?php endif; ?>
     <button class="theme-btn" onclick="toggleTheme()" title="Växla tema">🌓</button>
+    <button class="hamburger-btn" onclick="toggleMobileNav()" aria-label="Meny">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
   </div>
 </header>
+
+<!-- Mobile Navigation -->
+<div class="mobile-nav-overlay" onclick="closeMobileNav()"></div>
+<nav class="mobile-nav">
+  <div class="mobile-nav-header">
+    <div class="mobile-nav-title"><?= h(APP_NAME) ?></div>
+    <div class="mobile-nav-subtitle">Navigation</div>
+  </div>
+  <div class="mobile-nav-section">
+    <a href="./" class="mobile-nav-item">
+      <span class="icon">🏠</span>
+      <span>Hem</span>
+    </a>
+    <?php if ($isAuthed): ?>
+    <a href="edit/" class="mobile-nav-item">
+      <span class="icon">✏️</span>
+      <span>Ny skill</span>
+    </a>
+    <a href="logout.php" class="mobile-nav-item" onclick="return confirm('Logga ut?')">
+      <span class="icon">🔓</span>
+      <span>Logga ut</span>
+    </a>
+    <?php else: ?>
+    <a href="login.php" class="mobile-nav-item">
+      <span class="icon">🔐</span>
+      <span>Logga in</span>
+    </a>
+    <?php endif; ?>
+    <a href="javascript:void(0)" onclick="toggleTheme(); closeMobileNav();" class="mobile-nav-item">
+      <span class="icon">🌓</span>
+      <span>Växla tema</span>
+    </a>
+  </div>
+</nav>
 
 <div class="main">
 
