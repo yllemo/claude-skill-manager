@@ -10,17 +10,19 @@ A professional PHP-based web application for creating, editing, and managing `.s
 
 ## 🚀 Latest Updates
 
-- 🧩 **MCP Server Added** — New `mcp/index.php` endpoint with JSON-RPC tools for AI clients
-- 🧪 **MCP Test Panel** — New `mcp/test.php` for interactive endpoint testing
-- 📘 **MCP Documentation** — New `MCP.md` with protocol and usage details
-- 🌍 **Public Dashboard View** — Overview and view/download actions now available without login
-- 🔐 **Role-Based Actions** — Edit/delete/upload/new skill actions stay protected behind login
-- 📦 **Safer Upload Rules** — `.skill` and `.zip` uploads allowed, but archive content restricted to `.md` and `.txt`
+- � **AI-Powered Editing** — New AI editing mode with OpenAI, Ollama, and LM Studio integration
+- 💬 **AI Chat Assistant** — Interactive AI chat for skill creation and editing with configurable system prompts
+- ⚡ **Dual Editing Modes** — Switch seamlessly between classic Monaco editor and AI-assisted editing
+- 🏗️ **Smart File Structure** — Template-based file creation with predefined skill directory structures
+- 🔧 **Enhanced Configuration** — New AI provider settings with API key management and local/remote options
+- 📝 **Improved YAML Parsing** — Better frontmatter handling with YAML list support for tags
+- 🔐 **Enhanced Security** — Added `key.env` for secure API key storage with gitignore protection
 
 ## ✨ Features
 
+- 🤖 **AI-Powered Editing** — Chat with AI assistants to create and refine skills using OpenAI, Ollama, or LM Studio
 - 🗂️ **Skill Library Management** — Upload, organize, and manage .skill files with searchable metadata
-- ✏️ **Monaco Editor Integration** — Full VS Code editor experience with syntax highlighting
+- ✏️ **Dual Editor Experience** — Choose between Monaco Editor (VS Code-style) or AI-assisted editing
 - 👁️ **Live Preview** — Real-time Markdown rendering with Mermaid diagram support  
 - 🔐 **Secure Authentication** — Password-protected editing with session management
 - 📱 **Responsive Design** — Works seamlessly across desktop and mobile devices
@@ -28,6 +30,7 @@ A professional PHP-based web application for creating, editing, and managing `.s
 - 📥 **Import/Export** — Upload existing .skill files or download for backup
 - 🌐 **Public Viewing** — Share skills publicly while keeping editing secure
 - ⚡ **Performance Optimized** — Fast loading and efficient file handling
+- 🧩 **MCP Integration** — JSON-RPC endpoint for AI client integration
 
 ## 💡 Why Use Claude Skill Manager?
 
@@ -48,10 +51,17 @@ skill/
 ├── favicon.ico         # Custom favicon for the application
 ├── _common.php         # Shared functions, CSS and helpers
 ├── _auth.php           # Session authentication
+├── AI.md               # AI functionality documentation
 ├── MCP.md              # AI-focused MCP documentation
 ├── config/
 │   ├── config.php      # Password and settings
+│   ├── ai.php          # AI configuration (providers, models, system prompts)
+│   ├── key.env.example # Template for API keys and environment variables
 │   └── .htaccess       # Blocks direct HTTP access to /config/
+├── ai/
+│   ├── index.php       # AI-powered skill editor
+│   ├── chat.php        # AI chat API endpoint
+│   └── ai_lib.php      # AI integration library
 ├── mcp/
 │   ├── index.php       # MCP JSON-RPC endpoint
 │   └── test.php        # MCP web test panel
@@ -93,12 +103,26 @@ skill/
 - [Monaco Editor](https://microsoft.github.io/monaco-editor/) (VS Code's editor) with syntax highlighting per file type
 - File tree sidebar — click to switch files, each file has its own undo/redo
 - Live preview with Mermaid diagram support
-- Add new files to archive via `+ File` button
+- Add new files to archive via `+ File` button with smart structure templates
 - Rename/move files inside archive
 - Delete files inside archive
 - Binary files (images etc.) preserved when saving
 - Template button for `SKILL.md` inserts YAML frontmatter with metadata (including `author` and `tags`)
+- Switch to AI editing mode button
 - Help button (`?`) shows `skill-intro.md` as modal
+
+### 🤖 AI Editor (`/ai/?file=name.skill` or `/ai/` for new)
+**Requires authentication.**
+- AI-powered skill creation and editing with chat interface
+- Support for multiple AI providers: OpenAI, Ollama, and LM Studio
+- Configurable system prompts for different editing styles
+- File content inclusion in AI prompts for context-aware editing
+- Direct file replacement or selective content insertion from AI responses
+- Smart markdown extraction from AI responses
+- Local AI support (browser-to-localhost) for privacy-focused workflows  
+- Seamless switching between AI and Monaco editor modes
+- All traditional editing features (file management, templates, etc.)
+- AI provider settings with model selection and temperature control
 
 ### 🤖 MCP Endpoint (`/mcp/index.php`)
 **Public read endpoint for AI clients (JSON-RPC style).**
@@ -167,7 +191,7 @@ location: /optional/path/reference
    chmod 750 config/
    ```
 
-3. **Configure your password**
+3. **Configure your password and AI settings**
    ```bash
    # Copy the configuration template
    cp config/config.php.example config/config.php
@@ -175,6 +199,18 @@ location: /optional/path/reference
    Edit `config/config.php` and update the password:
    ```php
    'password' => 'your-secure-password',
+   ```
+
+   **Optional: Configure AI providers**
+   ```bash
+   # Copy AI environment template for API keys
+   cp config/key.env.example config/key.env
+   ```
+   Edit `config/key.env` for AI features (OpenAI API key, custom AI endpoints):
+   ```env
+   OPENAI_API_KEY=your-api-key-here
+   # OLLAMA_BASE=http://127.0.0.1:11434/v1  # Local Ollama (default)
+   # LMSTUDIO_BASE=http://127.0.0.1:1234/v1  # Local LM Studio (default)
    ```
 
 4. **Launch the application**
@@ -198,6 +234,18 @@ Upload a sample skill or create a new one to test all features are working corre
 Edit `config/config.php` to customize:
 - `password`: Login password (supports bcrypt hashing)
 - `session_lifetime`: How long login sessions last (default: 1 month)
+
+Edit `config/ai.php` to configure AI features:
+- `default_provider`: Choose between `openai`, `ollama`, or `lmstudio`
+- `models`: Default model names for each provider
+- `system_prompt`: Default system prompt for AI editing (overrideable in UI)
+- `openai_base`, `ollama_base`, `lmstudio_base`: API endpoints for each provider
+- `curl_timeout_seconds`: Timeout for AI requests
+
+Edit `config/key.env` for sensitive configuration:
+- `OPENAI_API_KEY`: Your OpenAI API key (required for OpenAI provider)
+- `OLLAMA_BASE`: Custom Ollama endpoint (optional, overrides config/ai.php)
+- `LMSTUDIO_BASE`: Custom LM Studio endpoint (optional, overrides config/ai.php)
 - `app_name`: Application title shown in UI
 
 ## 🔒 Security Notes

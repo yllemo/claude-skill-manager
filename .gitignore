@@ -24,6 +24,7 @@ php_errors.log
 !content/.keep
 !content/index.php
 /config/config.php
+/config/key.env
 
 # Logs
 *.log

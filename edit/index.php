@@ -129,6 +129,10 @@ foreach (array_keys($initialFiles) as $n) {
 if (!$defaultEntry && !empty($initialFiles)) {
     $defaultEntry = array_key_first($initialFiles);
 }
+
+$skillArchivePrefix = skill_archive_root_prefix_from_paths(array_keys($initialFiles));
+
+$switchToAiUrl = $isNew ? '../ai/' : ('../ai/?file=' . rawurlencode($filename));
 ?>
 <!DOCTYPE html>
 <html lang="sv" data-theme="light">
@@ -150,6 +154,21 @@ html,body{height:100%;overflow:hidden}
 .skill-name-input{width:100%;padding:5px 8px;border:1px solid var(--border-l);border-radius:var(--r);font:inherit;font-size:.82rem;background:var(--bg);color:var(--text);margin-bottom:7px}
 .skill-name-input:focus{outline:2px solid var(--accent);border-color:transparent}
 .sb-btn-row{display:flex;gap:4px}
+.add-file-custom{border:1px solid var(--border-l);border-radius:var(--r);padding:12px 14px;margin-bottom:16px;background:var(--bg-card)}
+.add-file-custom-h{font-size:.8rem;font-weight:700;color:var(--accent);margin-bottom:6px}
+.add-file-custom-d{font-size:.74rem;color:var(--text-2);margin-bottom:10px;line-height:1.45}
+.structure-modal .modal-box{max-width:820px}
+.structure-tree{font-family:Consolas,'Courier New',monospace;font-size:.68rem;line-height:1.45;background:var(--bg-nav);border:1px solid var(--border-l);border-radius:var(--r);padding:10px 12px;overflow-x:auto;margin:0 0 14px;color:var(--text)}
+.structure-intro{font-size:.85rem;color:var(--text-2);margin-bottom:12px;line-height:1.45}
+.structure-groups{display:flex;flex-direction:column;gap:10px}
+.structure-group{border:1px solid var(--border-l);border-radius:var(--r);padding:10px 12px;background:var(--bg-card)}
+.structure-group-h{font-size:.8rem;font-weight:700;color:var(--accent);margin-bottom:4px}
+.structure-group-d{font-size:.74rem;color:var(--text-2);margin-bottom:8px;line-height:1.45}
+.structure-group-line{margin:0 0 6px}
+.structure-group-line:last-child{margin-bottom:0}
+.structure-group-line strong{color:var(--text);font-weight:600}
+.structure-group .btn{font-size:.74rem}
+.structure-modal-footer{flex-wrap:wrap;gap:8px;justify-content:space-between}
 .tree-section-hdr{padding:5px 12px 4px;font-size:.63rem;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border-l);border-top:1px solid var(--border-l);margin-top:4px;display:flex;align-items:center;justify-content:space-between}
 .tree-wrap{flex:1;overflow-y:auto;padding:3px 0}
 
@@ -260,6 +279,10 @@ html,body{height:100%;overflow:hidden}
 .sidebar-toggle:hover{
   background:rgba(255,255,255,.22);
 }
+
+@media(max-width: 768px) {
+  .hdr-actions .btn.btn-switch-mode { display: inline-flex !important; }
+}
 </style>
 </head>
 <body>
@@ -275,6 +298,7 @@ html,body{height:100%;overflow:hidden}
   <div class="hdr-sep"></div>
   <div class="hdr-title"><?= h($pageTitle) ?></div>
   <div class="hdr-actions">
+    <a href="<?= h($switchToAiUrl) ?>" class="btn btn-sm btn-teal btn-switch-mode" title="<?= $isNew ? 'Byt till AI-redigering (ny tom skill)' : 'Öppna samma arkiv i AI-redigering' ?>">🤖 Byt till AI-redigering</a>
     <?php if (!$isNew): ?>
     <a href="../view/?file=<?= urlencode($filename) ?>" class="btn btn-white btn-sm">👁 Visa</a>
     <?php endif; ?>
@@ -305,6 +329,10 @@ html,body{height:100%;overflow:hidden}
     <a href="javascript:void(0)" onclick="toggleSidebar(); closeMobileNav();" class="mobile-nav-item">
       <span class="icon">🛠️</span>
       <span>Visa verktyg</span>
+    </a>
+    <a href="<?= h($switchToAiUrl) ?>" class="mobile-nav-item">
+      <span class="icon">🤖</span>
+      <span>Byt till AI-redigering</span>
     </a>
     <?php if (!$isNew): ?>
     <a href="../view/?file=<?= urlencode($filename) ?>" class="mobile-nav-item">
@@ -345,8 +373,8 @@ html,body{height:100%;overflow:hidden}
       <input type="text" id="skill-name-input" class="skill-name-input"
              value="<?= h($skillNameDefault) ?>" placeholder="min-skill">
       <div class="sb-btn-row">
-        <button class="btn btn-xs btn-success" style="flex:1" onclick="saveSkill()">💾 Spara</button>
-        <button class="btn btn-xs btn-secondary" onclick="addFile()" title="Lägg till fil i arkivet">+ Fil</button>
+        <button type="button" class="btn btn-xs btn-success" style="flex:1" onclick="saveSkill()">💾 Spara</button>
+        <button type="button" class="btn btn-xs btn-secondary" onclick="openAddFileModal()" title="Lägg till fil – egen sökväg eller standardmappar">+ Fil</button>
       </div>
     </div>
     <div class="tree-section-hdr">
@@ -406,7 +434,32 @@ html,body{height:100%;overflow:hidden}
       <div class="md" id="help-content"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-sm btn-primary" onclick="closeHelp()">Stäng</button>
+      <button type="button" class="btn btn-sm btn-primary" onclick="closeHelp()">Stäng</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden structure-modal" id="skill-structure-modal" onclick="if(event.target===this)closeSkillStructureModal()">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <span class="modal-hdr-title">+ Fil i arkivet</span>
+      <button type="button" class="btn btn-xs btn-secondary" onclick="closeSkillStructureModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="add-file-custom">
+        <div class="add-file-custom-h">Egen sökväg</div>
+        <p class="add-file-custom-d">Skapa en tom fil var du vill i arkivet. Ange t.ex. <code>references/guide.md</code>, <code>docs/README.md</code> eller <code>SKILL.md</code>.</p>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="addFileFromPrompt()">📝 Ange sökväg…</button>
+      </div>
+      <p class="structure-intro">
+        <strong>Standardmappar:</strong> välj en grupp för att skapa tomma mallfiler (befintliga sökvägar hoppas över). I en <code>.skill</code>-zip finns inga riktiga kataloger — sökvägar som <code>references/guide.md</code> skapar bara logiska mappar i trädet. Tabellen under beskriver <strong>syfte</strong> och hur innehåll typiskt <strong>laddas</strong> i agenten (on-demand jämfört med att köra skript).
+      </p>
+      <pre class="structure-tree" id="skill-structure-tree-diagram"></pre>
+      <div class="structure-groups" id="skill-structure-groups"></div>
+    </div>
+    <div class="modal-footer structure-modal-footer">
+      <button type="button" class="btn btn-sm btn-success" onclick="addAllSkillStructureFiles()">Lägg till alla saknade filer</button>
+      <button type="button" class="btn btn-sm btn-primary" onclick="closeSkillStructureModal()">Stäng</button>
     </div>
   </div>
 </div>
@@ -440,6 +493,8 @@ function processMermaid(container) {
 var initialFiles = <?= json_encode($initialFiles, JSON_UNESCAPED_UNICODE) ?>;
 var helpMd       = <?= json_encode($helpContent, JSON_UNESCAPED_UNICODE) ?>;
 var defaultEntry = <?= json_encode($defaultEntry) ?>;
+/** Om SKILL.md ligger i t.ex. min-skill/SKILL.md — nya sökvägar som /references/x läggs under den mappen */
+var skillArchivePrefix = <?= json_encode($skillArchivePrefix, JSON_UNESCAPED_UNICODE) ?>;
 
 // edits tracks files not yet opened in Monaco
 var edits = Object.assign({}, initialFiles);
@@ -449,11 +504,58 @@ var monacoEditor = null;
 /** Borttagna sökvägar som fortfarande finns i initialFiles (serverladdning) — döljs i träd och sparas inte */
 var removedFromArchive = new Set();
 
-function normalizeArchivePath(name) {
+/** Katalog som innehåller SKILL.md (t.ex. gs-it-… när posten är gs-it-…/SKILL.md). */
+function getSkillArchivePrefixLive() {
+  try {
+    if (typeof getAllPaths === 'function') {
+      var paths = getAllPaths();
+      for (var i = 0; i < paths.length; i++) {
+        var p = String(paths[i]).replace(/\\/g, '/');
+        var m = p.match(/^(.+)\/SKILL\.md$/i);
+        if (m) return m[1];
+      }
+    }
+  } catch (e) {}
+  return (typeof skillArchivePrefix === 'string' && skillArchivePrefix) ? skillArchivePrefix : '';
+}
+
+/**
+ * Om arkivet har SKILL.md i en undermapp, lägger till den prefixet så /references/x inte hamnar i ZIP-rot.
+ */
+function applySkillFolderPrefix(name) {
+  var p = getSkillArchivePrefixLive().replace(/\\/g, '/').replace(/\/+$/, '');
+  if (!p) return name;
+  var norm = String(name).replace(/\\/g, '/');
+  if (norm === p || norm.indexOf(p + '/') === 0) return name;
+  return p + '/' + name;
+}
+
+/**
+ * Normaliserar sökväg i arkivet (snedstreck, ingen path traversal).
+ * @param {string} name
+ * @param {string} [basePath] Om name bara är ett filnamn: lägg under samma mapp som basePath (t.ex. references/a.md + b.md → references/b.md).
+ * Ledande "/" = relativt skill-paketets rot (mappen med SKILL.md), inte ZIP-filens yttersta rot om den skiljer sig.
+ */
+function normalizeArchivePath(name, basePath) {
   if (!name || typeof name !== 'string') return '';
-  name = name.trim().replace(/^\/+/, '').replace(/\\/g, '/');
+  var trimmed = name.trim();
+  var fromArchiveRoot = /^\//.test(trimmed);
+  name = trimmed.replace(/^\/+/, '').replace(/\\/g, '/');
+  name = name.replace(/\/+/g, '/');
+  if (name.startsWith('./')) name = name.slice(2);
   if (!name || name.indexOf('..') !== -1) return '';
-  return name;
+  var parts = name.split('/').filter(function(p) { return p.length > 0; });
+  name = parts.join('/');
+  if (!name) return '';
+  if (!fromArchiveRoot && basePath && name.indexOf('/') === -1) {
+    var bp = String(basePath).replace(/\\/g, '/');
+    var slash = bp.lastIndexOf('/');
+    if (slash > 0) {
+      var dir = bp.slice(0, slash);
+      if (dir.indexOf('..') === -1) name = dir + '/' + name;
+    }
+  }
+  return applySkillFolderPrefix(name);
 }
 
 function updateFileActionButtons() {
@@ -533,14 +635,26 @@ require(['vs/editor/editor.main'], function() {
   requestAnimationFrame(layoutEditor);
 });
 
+/** Unik URI per arkivpost — parse("inmemory://skill/"+path) kan slå ihop modeller för olika filer. */
+function skillEntryToMonacoUri(entryPath) {
+  var norm = String(entryPath).replace(/\\/g, '/');
+  return monaco.Uri.from({
+    scheme: 'skill',
+    path: '/' + encodeURIComponent(norm),
+  });
+}
+
 // ── FILE SELECTION ─────────────────────────────────────
 function selectFile(path) {
   if (!monacoEditor) return;
+  if (currentFile && models[currentFile]) {
+    edits[currentFile] = models[currentFile].getValue();
+  }
   currentFile = path;
 
   // Get or create Monaco model for this file
   if (!models[path]) {
-    var uri  = monaco.Uri.parse('inmemory://skill/' + path.replace(/\s/g, '_'));
+    var uri  = skillEntryToMonacoUri(path);
     var lang = getLang(path);
     models[path] = monaco.editor.createModel(edits[path] || '', lang, uri);
   }
@@ -680,17 +794,194 @@ function saveSkill() {
   document.getElementById('skill-form').submit();
 }
 
-// ── ADD FILE ───────────────────────────────────────────
-function addFile() {
+// ── ADD FILE (+ Fil öppnar modal; denna anropas från "Ange sökväg…") ──
+function addFileFromPrompt() {
   var name = prompt('Nytt filnamn i arkivet\n(t.ex. references/README.md):');
   if (!name) return;
-  name = normalizeArchivePath(name);
-  if (!name) { alert('Ogiltigt filnamn.'); return; }
-  if (getAllPaths().indexOf(name) !== -1) { selectFile(name); return; }
+  name = normalizeArchivePath(name, currentFile);
+  if (!name) {
+    alert('Ogiltigt filnamn.');
+    return;
+  }
+  if (getAllPaths().indexOf(name) !== -1) {
+    closeSkillStructureModal();
+    selectFile(name);
+    return;
+  }
   removedFromArchive.delete(name);
   edits[name] = '';
   buildTree(name);
   selectFile(name);
+  closeSkillStructureModal();
+}
+
+// ── STANDARDMAPPAR (Cursor-liknande skill-struktur) ────
+var SKILL_STRUCTURE_TREE_DIAGRAM = [
+  'your-skill-name/',
+  '├── SKILL.md              # Huvudfil – YAML frontmatter + instruktioner',
+  '├── references/           # Extra markdown, API-guider, exempel (laddas vid behov)',
+  '│   ├── api-guide.md',
+  '│   ├── examples.md',
+  '│   └── troubleshooting.md',
+  '├── docs/                 # Alternativ till references/ – samma typ av material',
+  '│   ├── CONCEPTS.md',
+  '│   └── CLI-REFERENCE.md',
+  '├── scripts/              # Python/shell – körs via bash; laddas ej in i context som standard',
+  '│   ├── generate.py',
+  '│   └── validate.sh',
+  '├── templates/            # Mallar för nya filer / strukturerade prompts (vid behov)',
+  '│   └── report-template.md',
+  '├── workflows/            # Steg-för-steg arbetsflöden (vid behov)',
+  '│   └── workflow-a.md',
+  '└── assets/               # Bilder, JSON-konfig m.m. (vid behov)',
+  '    └── config.json',
+].join('\n');
+
+var SKILL_STRUCTURE_GROUPS = [
+  {
+    title: 'references/',
+    syfte: 'Extra markdown-dokumentation, API-guider och exempel.',
+    laddas: 'Vid behov (on-demand).',
+    files: ['references/api-guide.md', 'references/examples.md', 'references/troubleshooting.md'],
+  },
+  {
+    title: 'docs/',
+    syfte: 'Samma roll som references/ — välj en mapp eller använd båda efter behov.',
+    laddas: 'Vid behov (on-demand).',
+    files: ['docs/CONCEPTS.md', 'docs/CLI-REFERENCE.md'],
+  },
+  {
+    title: 'scripts/',
+    syfte: 'Python- och shell-skript som agenten kan köra via bash.',
+    laddas: 'Körs vid behov; koden laddas inte in i kontexten om du inte öppnar filen.',
+    files: ['scripts/generate.py', 'scripts/validate.sh'],
+  },
+  {
+    title: 'templates/',
+    syfte: 'Mallar för att generera nya filer eller strukturerade prompts.',
+    laddas: 'Vid behov (on-demand).',
+    files: ['templates/report-template.md'],
+  },
+  {
+    title: 'workflows/',
+    syfte: 'Steg-för-steg arbetsflöden och procedurer.',
+    laddas: 'Vid behov (on-demand).',
+    files: ['workflows/workflow-a.md'],
+  },
+  {
+    title: 'assets/',
+    syfte: 'Statiska filer: bilder, konfigurationsfiler m.m.',
+    laddas: 'Vid behov (on-demand).',
+    files: ['assets/config.json'],
+  },
+];
+
+function defaultContentForStructurePath(path) {
+  var base = (path.split('/').pop() || path || '').replace(/\.[^.]+$/, '');
+  var ext = (path.split('.').pop() || '').toLowerCase();
+  if (ext === 'md') {
+    return '# ' + base.replace(/[-_]/g, ' ') + '\n\n';
+  }
+  if (ext === 'py') {
+    return '#!/usr/bin/env python3\n# -*- coding: utf-8 -*-\n\n"""' + path + '"""\n\n';
+  }
+  if (ext === 'sh' || ext === 'bash') {
+    return '#!/usr/bin/env bash\nset -euo pipefail\n\n';
+  }
+  if (ext === 'json') {
+    return '{}\n';
+  }
+  return '';
+}
+
+function getAllSkillStructurePaths() {
+  var out = [];
+  SKILL_STRUCTURE_GROUPS.forEach(function(g) {
+    g.files.forEach(function(f) {
+      out.push(f);
+    });
+  });
+  return out;
+}
+
+function addFilesFromPreset(paths, closeModal) {
+  var added = [];
+  paths.forEach(function(p) {
+    var name = normalizeArchivePath(p);
+    if (!name) return;
+    if (getAllPaths().indexOf(name) !== -1) return;
+    removedFromArchive.delete(name);
+    edits[name] = defaultContentForStructurePath(name);
+    added.push(name);
+  });
+  if (added.length === 0) {
+    alert('Alla dessa filer finns redan i arkivet.');
+    return;
+  }
+  buildTree(added[added.length - 1]);
+  selectFile(added[added.length - 1]);
+  if (closeModal) closeSkillStructureModal();
+}
+
+function addSkillStructureGroup(index) {
+  var g = SKILL_STRUCTURE_GROUPS[index];
+  if (!g) return;
+  addFilesFromPreset(g.files, false);
+}
+
+function addAllSkillStructureFiles() {
+  addFilesFromPreset(getAllSkillStructurePaths(), true);
+}
+
+function buildSkillStructureGroupsUI() {
+  var container = document.getElementById('skill-structure-groups');
+  if (!container) return;
+  container.innerHTML = '';
+  var diagram = document.getElementById('skill-structure-tree-diagram');
+  if (diagram) diagram.textContent = SKILL_STRUCTURE_TREE_DIAGRAM;
+  SKILL_STRUCTURE_GROUPS.forEach(function(g, i) {
+    var wrap = document.createElement('div');
+    wrap.className = 'structure-group';
+    var h = document.createElement('div');
+    h.className = 'structure-group-h';
+    h.textContent = g.title;
+    var d = document.createElement('div');
+    d.className = 'structure-group-d';
+    var lineS = document.createElement('p');
+    lineS.className = 'structure-group-line';
+    var sStrong = document.createElement('strong');
+    sStrong.textContent = 'Syfte: ';
+    lineS.appendChild(sStrong);
+    lineS.appendChild(document.createTextNode(g.syfte));
+    var lineL = document.createElement('p');
+    lineL.className = 'structure-group-line';
+    var lStrong = document.createElement('strong');
+    lStrong.textContent = 'Laddas: ';
+    lineL.appendChild(lStrong);
+    lineL.appendChild(document.createTextNode(g.laddas));
+    d.appendChild(lineS);
+    d.appendChild(lineL);
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-xs btn-secondary';
+    btn.textContent = 'Lägg till ' + g.title.replace(/\/?$/, '');
+    btn.onclick = function() {
+      addSkillStructureGroup(i);
+    };
+    wrap.appendChild(h);
+    wrap.appendChild(d);
+    wrap.appendChild(btn);
+    container.appendChild(wrap);
+  });
+}
+
+function openAddFileModal() {
+  buildSkillStructureGroupsUI();
+  document.getElementById('skill-structure-modal').classList.remove('hidden');
+}
+
+function closeSkillStructureModal() {
+  document.getElementById('skill-structure-modal').classList.add('hidden');
 }
 
 // ── REMOVE / RENAME FILE ───────────────────────────────
@@ -719,7 +1010,7 @@ function removeFile(path) {
 function renameMoveFile(oldPath) {
   var name = prompt('Ny sökväg i arkivet (nytt namn eller mapp, t.ex. docs/guide.md):', oldPath);
   if (name == null) return;
-  name = normalizeArchivePath(name);
+  name = normalizeArchivePath(name, oldPath);
   if (!name) { alert('Ogiltig sökväg.'); return; }
   if (name === oldPath) return;
   if (getAllPaths().indexOf(name) !== -1) {
@@ -822,7 +1113,10 @@ function closeHelp() {
   document.getElementById('help-modal').classList.add('hidden');
 }
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeHelp();
+  if (e.key === 'Escape') {
+    closeHelp();
+    closeSkillStructureModal();
+  }
 });
 
 // ── UTILS ──────────────────────────────────────────────

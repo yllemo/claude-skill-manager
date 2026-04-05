@@ -24,9 +24,36 @@ function validate_file_param(string $file): ?string {
 }
 
 function sanitize_entry(string $name): string {
-    // Prevent path traversal in ZIP entries
-    $name = str_replace(['\\', '..'], ['/', ''], $name);
+    // Prevent path traversal in ZIP entries; enhetliga snedstreck som i ZIP-specen
+    $name = str_replace('\\', '/', $name);
+    $name = str_replace('..', '', $name);
+    $name = preg_replace('#/+#', '/', $name);
+
     return ltrim($name, '/');
+}
+
+/** Normaliserar postnamn från ZIP till nycklar med `/` (Windows-ZIP kan använda `\`). */
+function normalize_zip_entry_path(string $name): string {
+    $name = str_replace('\\', '/', $name);
+    $name = preg_replace('#/+#', '/', $name);
+
+    return ltrim($name, '/');
+}
+
+/**
+ * Mapp som innehåller skill-paketet i ZIP:et när SKILL.md inte ligger i arkivets rot
+ * (t.ex. min-skill/SKILL.md → "min-skill"). Tom sträng om SKILL.md är rotpost.
+ *
+ * @param list<string> $entryPaths Normaliserade sökvägar (t.ex. från read_zip_files).
+ */
+function skill_archive_root_prefix_from_paths(array $entryPaths): string {
+    foreach ($entryPaths as $n) {
+        if (preg_match('#^(.+)/SKILL\.md$#i', $n, $m)) {
+            return $m[1];
+        }
+    }
+
+    return '';
 }
 
 /**
@@ -115,15 +142,94 @@ function create_skill_from_uploaded_zip(string $tmpZipPath, string $destSkillPat
 function parse_frontmatter(string $content): array {
     $meta = [];
     $body = $content;
-    if (preg_match('/^---\s*\n(.*?)\n---\s*\n?(.*)/s', $content, $m)) {
-        foreach (explode("\n", $m[1]) as $line) {
-            if (preg_match('/^(\w+):\s*(.*)$/', trim($line), $kv)) {
-                $meta[$kv[1]] = trim($kv[2], '"\'');
+    if (!preg_match('/^---\s*\n(.*?)\n---\s*\n?(.*)/s', $content, $m)) {
+        return ['meta' => $meta, 'body' => $body];
+    }
+    $lines = explode("\n", $m[1]);
+    $n = count($lines);
+    $i = 0;
+    while ($i < $n) {
+        $line = $lines[$i];
+        if (trim($line) === '') {
+            $i++;
+            continue;
+        }
+        // tags: med YAML-lista på följande rader (  - tagg)
+        if (preg_match('/^tags:\s*(.*)$/', $line, $tm)) {
+            $rest = trim($tm[1]);
+            if ($rest !== '') {
+                $meta['tags'] = $rest;
+                $i++;
+                continue;
+            }
+            $i++;
+            $tagList = [];
+            while ($i < $n) {
+                $next = $lines[$i];
+                if (trim($next) === '') {
+                    $i++;
+                    continue;
+                }
+                if (preg_match('/^\s*-\s+(.+)$/', $next, $lm)) {
+                    $tagList[] = trim($lm[1], ' "\'');
+                    $i++;
+                } elseif (preg_match('/^\s*-\s*$/', $next)) {
+                    $i++;
+                } else {
+                    break;
+                }
+            }
+            $meta['tags'] = implode(', ', $tagList);
+            continue;
+        }
+        if (preg_match('/^(\w+):\s*(.*)$/', $line, $kv)) {
+            $meta[$kv[1]] = trim($kv[2], '"\'');
+            $i++;
+            continue;
+        }
+        $i++;
+    }
+    $body = ltrim($m[2]);
+
+    return ['meta' => $meta, 'body' => $body];
+}
+
+/**
+ * Normaliserar tags från YAML till en kommaseparerad sträng (trimmade taggar).
+ * Stödjer t.ex. tags: ["togaf"], tags: a, b och listformat (hanteras i parse_frontmatter).
+ */
+function normalize_skill_tags_value(string $raw): string {
+    $raw = trim($raw);
+    if ($raw === '') {
+        return '';
+    }
+    if ($raw[0] === '[') {
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) {
+            $parts = [];
+            foreach ($decoded as $v) {
+                $t = trim((string)$v);
+                if ($t !== '') {
+                    $parts[] = $t;
+                }
+            }
+
+            return implode(', ', $parts);
+        }
+        // [a, b] som inte är giltig JSON — ta bort hakparenteser och dela på komma
+        if (str_ends_with($raw, ']')) {
+            $inner = trim(substr($raw, 1, -1));
+            if ($inner !== '') {
+                $parts = array_filter(array_map('trim', explode(',', $inner)));
+
+                return implode(', ', $parts);
             }
         }
-        $body = ltrim($m[2]);
     }
-    return ['meta' => $meta, 'body' => $body];
+
+    $parts = array_filter(array_map('trim', explode(',', $raw)));
+
+    return implode(', ', $parts);
 }
 
 function get_skill_meta(string $zipPath): array {
@@ -145,6 +251,9 @@ function get_skill_meta(string $zipPath): array {
         }
     }
     $zip->close();
+    if (isset($info['tags']) && is_string($info['tags'])) {
+        $info['tags'] = normalize_skill_tags_value($info['tags']);
+    }
     if (empty($info['title'])) {
         $info['title'] = pathinfo(basename($zipPath), PATHINFO_FILENAME);
     }
@@ -189,9 +298,15 @@ function read_zip_files(string $zipPath): array {
     if ($zip->open($zipPath) !== true) return $entries;
     for ($i = 0; $i < $zip->numFiles; $i++) {
         $stat = $zip->statIndex($i);
-        $name = (string)$stat['name'];
-        if (str_ends_with($name, '/')) continue;
-        $ext  = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        $nameRaw = (string)$stat['name'];
+        if (str_ends_with($nameRaw, '/')) {
+            continue;
+        }
+        $name = normalize_zip_entry_path($nameRaw);
+        if ($name === '' || str_contains($name, '..')) {
+            continue;
+        }
+        $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
         $size = (int)$stat['size'];
         if (in_array($ext, TEXT_EXTS)) {
             $entries[$name] = ['type' => 'text', 'content' => (string)$zip->getFromIndex($i), 'size' => $size];
