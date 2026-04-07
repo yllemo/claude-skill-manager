@@ -10,13 +10,15 @@ A professional PHP-based web application for creating, editing, and managing `.s
 
 ## 🚀 Latest Updates
 
-- � **AI-Powered Editing** — New AI editing mode with OpenAI, Ollama, and LM Studio integration
-- 💬 **AI Chat Assistant** — Interactive AI chat for skill creation and editing with configurable system prompts
-- ⚡ **Dual Editing Modes** — Switch seamlessly between classic Monaco editor and AI-assisted editing
-- 🏗️ **Smart File Structure** — Template-based file creation with predefined skill directory structures
-- 🔧 **Enhanced Configuration** — New AI provider settings with API key management and local/remote options
-- 📝 **Improved YAML Parsing** — Better frontmatter handling with YAML list support for tags
-- 🔐 **Enhanced Security** — Added `key.env` for secure API key storage with gitignore protection
+- 🤖 **AI-Powered Editing** — Complete AI integration with OpenAI, Ollama, and LM Studio support
+- 💬 **Interactive AI Chat** — Real-time AI assistance for skill creation and editing with configurable system prompts
+- ⚡ **Dual Editing Modes** — Seamlessly switch between Monaco editor and AI-assisted editing modes
+- 🏗️ **Smart Templates** — Enhanced file structure templates with predefined skill directory organization
+- 🔧 **Enhanced Configuration** — Comprehensive AI provider settings with secure API key management
+- 📱 **Mobile Responsive** — Improved mobile navigation with hamburger menu and responsive design
+- 📝 **Better YAML Support** — Enhanced frontmatter handling with YAML list support for tags
+- 🔐 **Security Enhanced** — Secure API key storage via `key.env` with comprehensive gitignore protection
+- 📥 **Bulk Operations** — New bulk content download functionality for complete archive management
 
 ## ✨ Features
 
@@ -48,6 +50,7 @@ skill/
 ├── login.php           # Authentication page  
 ├── logout.php          # Logout handler
 ├── download.php        # Serves downloads as .skill or .zip (filename extension option)
+├── download_content.php # Bulk content download (requires authentication)
 ├── favicon.ico         # Custom favicon for the application
 ├── _common.php         # Shared functions, CSS and helpers
 ├── _auth.php           # Session authentication
@@ -354,72 +357,3 @@ This is an **active project** currently in production use. We're continuously im
 **Made with ❤️ for the Claude AI community**
 
 **Need help?** Open an issue or check the [skill-intro.md](skill-intro.md) for detailed information about the .skill file format.
-- Skrivbehörighet på `/content/`-mappen
-
-### Snabbstart
-
-```bash
-git clone <repo> skill
-cd skill
-chmod 755 content/
-php -S localhost:8080
-```
-
-Öppna `http://localhost:8080` i webbläsaren och logga in.
-
-### Apache / Nginx
-Peka webbroten mot mappen. Inga `.htaccess`-regler krävs utöver den i `/config/`.
-
----
-
-## Konfiguration
-
-Redigera `/config/config.php`:
-
-```php
-return [
-    'password'         => 'admin123',   // Byt till eget lösenord
-    'session_lifetime' => 2592000,      // Sekunder — standard 1 månad
-    'app_name'         => 'Skill Manager',
-];
-```
-
-### Bcrypt-lösenord (rekommenderat)
-
-```bash
-php -r "echo password_hash('ditt-lösenord', PASSWORD_BCRYPT);"
-```
-
-Klistra in den genererade hashen som `password`-värde — systemet känner igen `$2y$...` automatiskt.
-
----
-
-## Åtkomstkontroll
-
-| Sida | Inloggning krävs |
-|------|-----------------|
-| `/` (lista) | ✅ Ja |
-| `/edit/` | ✅ Ja |
-| `/view/` | ❌ Nej — öppen |
-| `/login.php` | ❌ Nej |
-| `/download.php` | ❌ Nej |
-
-Sessionen varar i konfigurerad tid (standard: 1 månad) och överlever webbläsarstängning.
-
----
-
-## Beroenden (CDN)
-
-Alla externa bibliotek laddas från CDN — ingen byggprocess krävs.
-
-| Bibliotek | Version | Användning |
-|-----------|---------|------------|
-| [marked.js](https://marked.js.org/) | latest | Markdown-rendering |
-| [Mermaid](https://mermaid.js.org/) | latest | Diagram i Markdown |
-| [Monaco Editor](https://microsoft.github.io/monaco-editor/) | 0.47.0 | Kodredigerare i /edit/ |
-
----
-
-## Tema
-
-Ljust och mörkt tema — sparas i `localStorage`. Klicka på 🌓 i headern för att växla. Monaco och Mermaid synkar automatiskt med valt tema.

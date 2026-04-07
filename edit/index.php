@@ -199,6 +199,7 @@ html,body{height:100%;overflow:hidden}
 .eleft{border-right:1px solid var(--border-l);position:relative}
 .pane-hdr{padding:6px 12px;background:var(--bg-nav);border-bottom:1px solid var(--border-l);font-size:.7rem;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;display:flex;align-items:center;gap:6px}
 .lang-badge{font-size:.62rem;padding:1px 5px;background:var(--accent);color:#fff;border-radius:3px;text-transform:none;letter-spacing:0;font-weight:600}
+.pane-hdr .editor-hint{font-size:.62rem;font-weight:400;color:var(--text-2);text-transform:none;letter-spacing:0;margin-left:auto;white-space:nowrap}
 #monaco-container{flex:1;min-height:0;overflow:hidden}
 .preview-scroll{flex:1;overflow-y:auto;padding:18px 20px}
 
@@ -409,6 +410,7 @@ html,body{height:100%;overflow:hidden}
         <div class="pane-hdr">
           ✏️ Editor
           <span class="lang-badge" id="lang-badge">markdown</span>
+          <span class="editor-hint" title="Visar alla andra filer i arkivet som Markdown-länk eller sökväg">Ctrl+Space · filreferenser</span>
         </div>
         <div id="monaco-container"></div>
       </div>
@@ -589,6 +591,59 @@ window.toggleTheme = function() {
   updatePreview();
 };
 
+// ── MONACO: FILREFERENSER (Ctrl+Space / IntelliSense) ──
+function registerSkillArchiveCompletionProvider(monaco) {
+  function linkTitleFromPath(path) {
+    var base = path.split('/').pop() || path;
+    return base.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+  }
+  function mdLinkInsert(path) {
+    var title = linkTitleFromPath(path);
+    if (/[)\s]/.test(path)) {
+      return '[' + title + '](<' + path.replace(/>/g, '\\>') + '>)';
+    }
+    return '[' + title + '](' + path + ')';
+  }
+  function provideCompletionItems() {
+    var paths = getAllPaths().filter(function(p) { return p && p !== currentFile; });
+    paths.sort();
+    var suggestions = [];
+    paths.forEach(function(path) {
+      var title = linkTitleFromPath(path);
+      suggestions.push({
+        label: path,
+        kind: monaco.languages.CompletionItemKind.File,
+        detail: 'Markdown-länk',
+        insertText: mdLinkInsert(path),
+        filterText: path + ' ' + title + ' länk',
+        documentation: { value: 'Infogar `[text](sökväg)` till filen i .skill-arkivet.' },
+      });
+      suggestions.push({
+        label: path + ' · `kod`',
+        kind: monaco.languages.CompletionItemKind.Constant,
+        detail: 'Sökväg i backticks',
+        insertText: '`' + path + '`',
+        filterText: path + ' kod inline',
+        documentation: { value: 'Infogar sökvägen som inline-kod (t.ex. för att peka ut en fil i text).' },
+      });
+    });
+    return { suggestions: suggestions, incomplete: false };
+  }
+  var provider = {
+    provideCompletionItems: function() {
+      return provideCompletionItems();
+    },
+  };
+  [
+    'markdown', 'plaintext', 'yaml', 'json', 'javascript', 'typescript',
+    'python', 'shell', 'css', 'html', 'xml', 'ini', 'sql',
+  ].forEach(function(langId) {
+    try {
+      monaco.languages.registerCompletionItemProvider(langId, provider);
+    } catch (e) { /* språk saknas i denna Monaco-build */ }
+  });
+}
+
 // ── INIT MONACO ────────────────────────────────────────
 require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.47.0/min/vs' } });
 require(['vs/editor/editor.main'], function() {
@@ -629,6 +684,8 @@ require(['vs/editor/editor.main'], function() {
   monacoEditor.onDidChangeModelContent(function() {
     updatePreview();
   });
+
+  registerSkillArchiveCompletionProvider(monaco);
 
   // Open default file, then layout again after model is set
   selectFile(defaultEntry);

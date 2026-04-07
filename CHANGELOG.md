@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-04-05
+
+### Added
+- AI-powered editing capabilities with comprehensive AI integration
+- Support for OpenAI, Ollama, and LM Studio providers
+- Interactive AI chat interface for skill creation and editing
+- Configurable system prompts and model selection
+- Local AI support for privacy-focused workflows
+- Enhanced file management with smart templates
+- New `download_content.php` for bulk content download
+- Improved mobile responsiveness with hamburger menu
+
+### Enhanced
+- Better YAML frontmatter parsing with list support for tags
+- Enhanced ZIP entry path normalization and handling
+- Improved editor UI with seamless switching between Monaco and AI modes
+- Better security with API key management through environment files
+- Enhanced documentation with comprehensive setup guides
+
+### Security
+- Added `config/key.env.example` for secure API key storage
+- Enhanced gitignore protection for sensitive files
+- Improved path sanitization for ZIP entries
+
 ## [1.1.0] - 2026-03-26
 
 ### Added

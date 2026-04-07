@@ -84,6 +84,34 @@ foreach ($skills as $s) {
 ksort($allTags);
 $allTags = array_keys($allTags);
 
+// ?tag=… för direktlänk till taggfilter (trimmas, begränsad längd)
+$tagQuery = isset($_GET['tag']) ? trim((string)$_GET['tag']) : '';
+$tagQuery = preg_replace('/[\x00-\x1F\x7F]/u', '', $tagQuery);
+if (strlen($tagQuery) > 200) {
+    $tagQuery = substr($tagQuery, 0, 200);
+}
+
+/** ?sort=… — samma värden som #sort-select (kolumn + riktning) */
+$sortOptions = [
+    'modified-desc' => 'Senast ändrad ↓',
+    'modified-asc'  => 'Senast ändrad ↑',
+    'title-asc'     => 'Titel A–Ö',
+    'title-desc'    => 'Titel Ö–A',
+    'tags-asc'      => 'Taggar A–Ö',
+    'tags-desc'     => 'Taggar Ö–A',
+    'author-asc'    => 'Författare A–Ö',
+    'author-desc'   => 'Författare Ö–A',
+    'files-asc'     => 'Filer ↑',
+    'files-desc'    => 'Filer ↓',
+    'size-asc'      => 'Storlek ↑',
+    'size-desc'     => 'Storlek ↓',
+];
+$sortQuery = isset($_GET['sort']) ? trim((string)$_GET['sort']) : '';
+$sortQuery = strtolower(preg_replace('/[^a-z0-9\-]/', '', $sortQuery));
+if ($sortQuery === '' || !isset($sortOptions[$sortQuery])) {
+    $sortQuery = 'modified-desc';
+}
+
 // Bygg JSON för klientsidan
 $skillsJson = array_map(fn($s) => [
     'filename' => $s['filename'],
@@ -163,7 +191,8 @@ html, body { height: auto; overflow: auto; }
 .col-title a { color: var(--accent); font-weight: 600; text-decoration: none; }
 .col-title .row-desc { font-size: .74rem; color: var(--text-2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px; }
 .col-tags { min-width: 100px; }
-.tag { display: inline-block; background: var(--bg-info); border: 1px solid var(--border-l); border-radius: 3px; padding: 1px 6px; font-size: .67rem; color: var(--text-2); margin: 1px; cursor: pointer; }
+.tag { display: inline-block; background: var(--bg-info); border: 1px solid var(--border-l); border-radius: 3px; padding: 1px 6px; font-size: .67rem; color: var(--text-2); margin: 1px; cursor: pointer; text-decoration: none; }
+a.tag { color: var(--text-2); }
 .tag:hover { border-color: var(--accent); color: var(--accent); }
 .col-meta { color: var(--text-2); white-space: nowrap; font-size: .76rem; }
 .col-actions { white-space: nowrap; text-align: right; }
@@ -211,6 +240,7 @@ html, body { height: auto; overflow: auto; }
   <div class="hdr-actions">
     <?php if ($isAuthed): ?>
     <a href="edit/" class="btn btn-white btn-sm">✏️ Ny skill</a>
+    <a href="download_content.php" class="btn btn-white btn-sm" title="Ladda ner alla filer i content/ som zip">⬇ Allt innehåll</a>
     <a href="logout.php" class="btn btn-white btn-sm" onclick="return confirm('Logga ut?')">🔓 Logga ut</a>
     <?php else: ?>
     <a href="login.php" class="btn btn-white btn-sm">🔐 Logga in</a>
@@ -240,6 +270,10 @@ html, body { height: auto; overflow: auto; }
     <a href="edit/" class="mobile-nav-item">
       <span class="icon">✏️</span>
       <span>Ny skill</span>
+    </a>
+    <a href="download_content.php" class="mobile-nav-item">
+      <span class="icon">⬇</span>
+      <span>Allt innehåll (zip)</span>
     </a>
     <a href="logout.php" class="mobile-nav-item" onclick="return confirm('Logga ut?')">
       <span class="icon">🔓</span>
@@ -278,14 +312,26 @@ html, body { height: auto; overflow: auto; }
       <?php foreach ($allTags as $tag): ?>
       <option value="<?= h($tag) ?>"><?= h($tag) ?></option>
       <?php endforeach; ?>
+      <?php
+        if ($tagQuery !== '') {
+            $tagInList = false;
+            foreach ($allTags as $t) {
+                if (strcasecmp($t, $tagQuery) === 0) {
+                    $tagInList = true;
+                    break;
+                }
+            }
+            if (!$tagInList) {
+                echo '<option value="' . h($tagQuery) . '">' . h($tagQuery) . "</option>\n";
+            }
+        }
+      ?>
     </select>
 
     <select class="filter-select" id="sort-select" onchange="applyFilters()">
-      <option value="modified-desc">Senast ändrad ↓</option>
-      <option value="modified-asc">Senast ändrad ↑</option>
-      <option value="title-asc">Titel A–Ö</option>
-      <option value="title-desc">Titel Ö–A</option>
-      <option value="size-desc">Storlek ↓</option>
+      <?php foreach ($sortOptions as $val => $label): ?>
+      <option value="<?= h($val) ?>"<?= $sortQuery === $val ? ' selected' : '' ?>><?= h($label) ?></option>
+      <?php endforeach; ?>
     </select>
 
     <?php if ($isAuthed): ?>
@@ -346,8 +392,13 @@ html, body { height: auto; overflow: auto; }
         <?php endif; ?>
       </td>
       <td class="col-tags">
-        <?php foreach (array_filter(array_map('trim', explode(',', $tags))) as $tag): ?>
-        <span class="tag" onclick="setTagFilter(<?= json_encode($tag) ?>)"><?= h($tag) ?></span>
+        <?php foreach (array_filter(array_map('trim', explode(',', $tags))) as $tag):
+          $tagHref = '?tag=' . rawurlencode($tag);
+          if ($sortQuery !== 'modified-desc') {
+              $tagHref .= '&sort=' . rawurlencode($sortQuery);
+          }
+        ?>
+        <a href="<?= h($tagHref) ?>" class="tag" onclick="event.preventDefault(); setTagFilter(<?= json_encode($tag, JSON_HEX_TAG | JSON_HEX_APOS | JSON_UNESCAPED_UNICODE) ?>);"><?= h($tag) ?></a>
         <?php endforeach; ?>
       </td>
       <td class="col-meta"><?= h($author) ?><?php if ($version): ?><br><span style="font-size:.7rem">v<?= h($version) ?></span><?php endif; ?></td>
@@ -392,6 +443,57 @@ html, body { height: auto; overflow: auto; }
 
 <script>
 var sortCol = 'modified', sortDir = 'desc';
+/** Från ?tag=… vid sidladdning (tom sträng om inget) */
+var tagQueryFromServer = <?= json_encode($tagQuery, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS) ?>;
+/** Från ?sort=… (t.ex. title-asc, modified-desc) */
+var sortQueryFromServer = <?= json_encode($sortQuery, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS) ?>;
+var sortDefaultValue = 'modified-desc';
+
+function initTagFilterFromQuery() {
+  var sel = document.getElementById('tag-filter');
+  if (!sel) return;
+  var q = (typeof tagQueryFromServer === 'string' ? tagQueryFromServer : '').trim();
+  if (!q) return;
+  var lower = q.toLowerCase();
+  for (var i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value.toLowerCase() === lower) {
+      sel.selectedIndex = i;
+      return;
+    }
+  }
+  var opt = document.createElement('option');
+  opt.value = q;
+  opt.textContent = q;
+  sel.appendChild(opt);
+  sel.value = q;
+}
+
+/** Uppdaterar ?tag= och ?sort= utan omladdning (standardvärden tas bort för kortare URL) */
+function syncIndexQueryToUrl() {
+  var url = new URL(window.location.href);
+  var tagSel = document.getElementById('tag-filter');
+  var sortSel = document.getElementById('sort-select');
+  if (tagSel) {
+    var tv = tagSel.value.trim();
+    if (tv) {
+      url.searchParams.set('tag', tv);
+    } else {
+      url.searchParams.delete('tag');
+    }
+  }
+  if (sortSel) {
+    var sv = sortSel.value.trim() || sortDefaultValue;
+    if (sv && sv !== sortDefaultValue) {
+      url.searchParams.set('sort', sv);
+    } else {
+      url.searchParams.delete('sort');
+    }
+  }
+  var next = url.pathname + url.search + url.hash;
+  if (next !== window.location.pathname + window.location.search + window.location.hash) {
+    history.replaceState({}, '', next);
+  }
+}
 
 function applyFilters() {
   var q      = document.getElementById('search-input').value.trim().toLowerCase();
@@ -443,6 +545,7 @@ function applyFilters() {
   document.getElementById('no-results').classList.toggle('hidden', visible > 0);
 
   updateSortArrows();
+  syncIndexQueryToUrl();
 }
 
 function getSortVal(row) {
@@ -486,7 +589,81 @@ function setTagFilter(tag) {
   document.getElementById('search-input').focus();
 }
 
-document.getElementById('skill-tbody').addEventListener('toggle', function(e) {
+function initSortFromQueryString() {
+  var sortSel = document.getElementById('sort-select');
+  if (!sortSel) return;
+  var s = (typeof sortQueryFromServer === 'string' ? sortQueryFromServer : '').trim();
+  if (!s) s = sortDefaultValue;
+  var found = false;
+  for (var i = 0; i < sortSel.options.length; i++) {
+    if (sortSel.options[i].value === s) {
+      sortSel.selectedIndex = i;
+      found = true;
+      break;
+    }
+  }
+  if (!found && s) {
+    var opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = s;
+    sortSel.appendChild(opt);
+    sortSel.value = s;
+  }
+}
+
+window.addEventListener('popstate', function() {
+  var params = new URLSearchParams(window.location.search);
+  var p = params.get('tag') || '';
+  var sel = document.getElementById('tag-filter');
+  if (sel) {
+    p = p.trim();
+    if (!p) {
+      sel.value = '';
+    } else {
+      var lower = p.toLowerCase();
+      var found = false;
+      for (var i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value.toLowerCase() === lower) {
+          sel.selectedIndex = i;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        var opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        sel.appendChild(opt);
+        sel.value = p;
+      }
+    }
+  }
+  var sortSel = document.getElementById('sort-select');
+  if (sortSel) {
+    var sv = (params.get('sort') || '').trim().toLowerCase();
+    sv = sv.replace(/[^a-z0-9\-]/g, '');
+    if (!sv) sv = sortDefaultValue;
+    var sf = false;
+    for (var j = 0; j < sortSel.options.length; j++) {
+      if (sortSel.options[j].value === sv) {
+        sortSel.selectedIndex = j;
+        sf = true;
+        break;
+      }
+    }
+    if (!sf && sv) {
+      var o2 = document.createElement('option');
+      o2.value = sv;
+      o2.textContent = sv;
+      sortSel.appendChild(o2);
+      sortSel.value = sv;
+    }
+  }
+  applyFilters();
+});
+
+var skillTbody = document.getElementById('skill-tbody');
+if (skillTbody) skillTbody.addEventListener('toggle', function(e) {
   var t = e.target;
   if (!t.classList || !t.classList.contains('split-dl') || !t.open) return;
   document.querySelectorAll('#skill-tbody .split-dl[open]').forEach(function(d) {
@@ -498,7 +675,9 @@ document.addEventListener('click', function(e) {
   document.querySelectorAll('#skill-tbody .split-dl-details[open]').forEach(function(d) { d.open = false; });
 });
 
-// Init
+// Init: ?tag= och ?sort= (sort sätts även av PHP selected på option)
+initTagFilterFromQuery();
+initSortFromQueryString();
 applyFilters();
 </script>
 </body>
