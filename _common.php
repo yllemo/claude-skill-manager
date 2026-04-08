@@ -183,7 +183,42 @@ function parse_frontmatter(string $content): array {
             continue;
         }
         if (preg_match('/^(\w+):\s*(.*)$/', $line, $kv)) {
-            $meta[$kv[1]] = trim($kv[2], '"\'');
+            $key = $kv[1];
+            $rest = trim($kv[2]);
+            // YAML block scalar: description: > / >- / | / |- med indenterade fortsättningsrader
+            if (preg_match('/^>\-?\s*$/', $rest) || preg_match('/^\|\-?\s*$/', $rest)) {
+                $isFolded = $rest !== '' && $rest[0] === '>';
+                $i++;
+                $chunk = [];
+                while ($i < $n) {
+                    $next = $lines[$i];
+                    if (preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*:\s/', $next)) {
+                        break;
+                    }
+                    if (preg_match('/^[ \t]+/', $next)) {
+                        $chunk[] = (string)preg_replace('/^[ \t]+/', '', $next, 1);
+                        $i++;
+                        continue;
+                    }
+                    if (trim($next) === '') {
+                        $i++;
+                        if ($isFolded) {
+                            $chunk[] = ' ';
+                        } else {
+                            $chunk[] = '';
+                        }
+                        continue;
+                    }
+                    break;
+                }
+                if ($isFolded) {
+                    $meta[$key] = trim(preg_replace('/\s+/', ' ', implode(' ', $chunk)));
+                } else {
+                    $meta[$key] = trim(implode("\n", $chunk));
+                }
+                continue;
+            }
+            $meta[$key] = trim($rest, '"\'');
             $i++;
             continue;
         }
@@ -437,7 +472,7 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;colo
 .fm-lbl{font-size:.68rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px}
 .fm-row{display:flex;gap:9px;margin-bottom:2px}
 .fm-k{color:var(--accent);font-weight:600;min-width:96px;flex-shrink:0}
-.fm-v{color:var(--text-2);word-break:break-word}
+.fm-v{color:var(--text-2);word-break:break-word;white-space:pre-wrap}
 
 /* MISC */
 .hidden{display:none!important}

@@ -10,13 +10,15 @@ A professional PHP-based web application for creating, editing, and managing `.s
 
 ## 🚀 Latest Updates
 
+- 🔍 **Enhanced Mermaid Diagrams** — Interactive fullscreen viewing with pan/zoom, text selection, and diagram source code access
+- 📄 **Improved YAML Support** — Enhanced frontmatter parsing with multi-line description support using YAML block scalars
+- 🖨️ **Print-Friendly Styles** — Optimized printing layouts with clean, professional output
 - 🤖 **AI-Powered Editing** — Complete AI integration with OpenAI, Ollama, and LM Studio support
 - 💬 **Interactive AI Chat** — Real-time AI assistance for skill creation and editing with configurable system prompts
 - ⚡ **Dual Editing Modes** — Seamlessly switch between Monaco editor and AI-assisted editing modes
 - 🏗️ **Smart Templates** — Enhanced file structure templates with predefined skill directory organization
 - 🔧 **Enhanced Configuration** — Comprehensive AI provider settings with secure API key management
 - 📱 **Mobile Responsive** — Improved mobile navigation with hamburger menu and responsive design
-- 📝 **Better YAML Support** — Enhanced frontmatter handling with YAML list support for tags
 - 🔐 **Security Enhanced** — Secure API key storage via `key.env` with comprehensive gitignore protection
 - 📥 **Bulk Operations** — New bulk content download functionality for complete archive management
 
@@ -25,9 +27,10 @@ A professional PHP-based web application for creating, editing, and managing `.s
 - 🤖 **AI-Powered Editing** — Chat with AI assistants to create and refine skills using OpenAI, Ollama, or LM Studio
 - 🗂️ **Skill Library Management** — Upload, organize, and manage .skill files with searchable metadata
 - ✏️ **Dual Editor Experience** — Choose between Monaco Editor (VS Code-style) or AI-assisted editing
-- 👁️ **Live Preview** — Real-time Markdown rendering with Mermaid diagram support  
+- 👁️ **Live Preview** — Real-time Markdown rendering with enhanced Mermaid diagram support and fullscreen viewing
+- 🖱️ **Interactive Diagrams** — Pan, zoom, and select text in Mermaid diagrams with dedicated fullscreen mode
 - 🔐 **Secure Authentication** — Password-protected editing with session management
-- 📱 **Responsive Design** — Works seamlessly across desktop and mobile devices
+- 📱 **Responsive Design** — Works seamlessly across desktop and mobile devices with print-friendly styles
 - 🏷️ **Tag System** — Organize skills with tags and advanced filtering
 - 📥 **Import/Export** — Upload existing .skill files or download for backup
 - 🌐 **Public Viewing** — Share skills publicly while keeping editing secure
@@ -94,12 +97,14 @@ skill/
 ### 👁️ Skill Viewer (`/view/?file=name.skill`)
 **Public access — no authentication required.**
 - File tree sidebar showing all files in the ZIP archive
-- Renders Markdown via [marked.js](https://marked.js.org/) with [Mermaid](https://mermaid.js.org/) diagram support
-- Sidebar shows frontmatter metadata, tags, and file info
+- Renders Markdown via [marked.js](https://marked.js.org/) with enhanced [Mermaid](https://mermaid.js.org/) diagram support
+- **Interactive Mermaid diagrams** — Fullscreen viewing with pan/zoom, text selection in SVG elements
+- Sidebar shows frontmatter metadata, tags, and file info with support for multi-line descriptions
 - Toggle between rendered view and raw text
 - Copy button for file contents
 - Edit button shown only when authenticated (guests see Login button instead)
 - Download button includes format dropdown (`.skill` / `.zip`)
+- **Print-friendly** — Optimized printing with clean layout (hides navigation, headers, etc.)
 
 ### ✏️ Skill Editor (`/edit/?file=name.skill` or `/edit/` for new)
 **Requires authentication.**
@@ -154,7 +159,10 @@ my-skill/
 ---
 name: my-skill
 title: My Skill  
-description: Describe when and how this skill should be used
+description: >
+  Multi-line descriptions are supported using YAML block scalars.
+  This allows for detailed explanations that span multiple lines
+  while maintaining proper formatting.
 author: Your Name
 version: 1.0
 tags: php, web, api
@@ -170,6 +178,8 @@ location: /optional/path/reference
 1. Step one
 2. Step two
 ```
+
+**Enhanced YAML Support**: The frontmatter parser now supports YAML block scalars (`>` and `|`) for multi-line descriptions, allowing for better documentation formatting.
 
 ## 🚀 Quick Start
 
