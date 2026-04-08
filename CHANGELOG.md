@@ -16,9 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced file management with smart templates
 - New `download_content.php` for bulk content download
 - Improved mobile responsiveness with hamburger menu
+- Print stylesheet on `view/index.php`: browser print/PDF uses only the main content area (markdown body), hiding app chrome (header, sidebar, toolbar, footer, Mermaid overlay); dark theme variables are lightened for readable print output
+
+### Fixed
+- Mermaid fullscreen **Passa in** (fit): scales from rendered SVG size in pixels (with `getBBox`/`getScreenCTM` fallback) and removes the old max-scale cap so small diagrams fill the viewport instead of staying tiny and off-center
 
 ### Enhanced
-- Better YAML frontmatter parsing with list support for tags
+- YAML frontmatter: block scalars (`>` / `>-` folded, `|` / `|-` literal) for multi-line fields (e.g. `description`), list form for `tags`, and client-side `parseFM` aligned with `parse_frontmatter` in `_common.php`
+- Skill description and frontmatter value cells use `white-space: pre-wrap` where needed for multi-line display
 - Enhanced ZIP entry path normalization and handling
 - Improved editor UI with seamless switching between Monaco and AI modes
 - Better security with API key management through environment files
