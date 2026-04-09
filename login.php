@@ -20,19 +20,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: ' . $redirect);
         exit;
     }
-    $error = 'Fel lösenord. Försök igen.';
+    $error = __('login.error');
 }
 
 $cfg = skill_config();
 $appName = $cfg['app_name'] ?? APP_NAME;
 ?>
 <!DOCTYPE html>
-<html lang="sv" data-theme="light">
+<html lang="<?= h(skill_lang_html_lang()) ?>" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <?php favicon_link(); ?>
-<title>Logga in — <?= h($appName) ?></title>
+<title><?= h(__('login.title')) ?> — <?= h($appName) ?></title>
 <?php theme_script(); ?>
 <?php common_css(); ?>
 <style>
@@ -135,18 +135,18 @@ body{justify-content:center;align-items:center}
 </head>
 <body>
 
-<button class="btn theme-btn login-theme" onclick="toggleTheme()" title="Växla tema">🌓</button>
+<button class="btn theme-btn login-theme" onclick="toggleTheme()" title="<?= h(__('common.theme_toggle')) ?>">🌓</button>
 
 <div class="login-card">
   <div class="login-logo">
     <div class="login-logo-mark">📘</div>
     <div class="login-logo-text">
       <?= h($appName) ?>
-      <div class="login-logo-sub">.skill filer</div>
+      <div class="login-logo-sub"><?= h(__('common.logo_sub')) ?></div>
     </div>
   </div>
 
-  <div class="login-title">Ange lösenord för att fortsätta</div>
+  <div class="login-title"><?= h(__('login.prompt')) ?></div>
 
   <?php if ($error): ?>
   <div class="login-error">⚠ <?= h($error) ?></div>
@@ -157,12 +157,12 @@ body{justify-content:center;align-items:center}
     <input type="hidden" name="back" value="<?= h($back) ?>">
     <?php endif; ?>
     <div class="login-field">
-      <label>Lösenord</label>
+      <label><?= h(__('login.password_label')) ?></label>
       <input type="password" name="password" autofocus autocomplete="current-password"
-             placeholder="••••••••" required>
+             placeholder="<?= h(__('login.password_placeholder')) ?>" required>
     </div>
     <div style="margin-top:16px">
-      <button type="submit" class="btn btn-primary login-submit">🔑 Logga in</button>
+      <button type="submit" class="btn btn-primary login-submit">🔑 <?= h(__('login.submit')) ?></button>
     </div>
   </form>
 </div>

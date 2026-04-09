@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $origFile  = basename($_POST['original_file'] ?? '');
 
     if ($skillName === '') {
-        $error = 'Ange ett namn för skill-filen.';
+        $error = __('ai.error_name');
     } else {
         $newFname = sanitize_filename($skillName);
         $savePath = CONTENT_DIR . $newFname;
@@ -96,37 +96,11 @@ if (!$isNew && $filePath) {
     }
     $skillNameDefault = pathinfo($filename, PATHINFO_FILENAME);
 } else {
-    $initialFiles['SKILL.md'] = <<<'SKILLMD'
----
-name:
-title:
-description:
-author:
-version: 1.0.0
-tags:
----
-
-# Ny skill
-
-## Syfte
-
-Beskriv vad denna skill gör och när den används.
-
-## Instruktioner
-
-1. Steg ett
-2. Steg två
-
-## Exempel
-
-```
-# Exempel
-```
-SKILLMD;
+    $initialFiles['SKILL.md'] = skill_default_skill_md_template();
     $skillNameDefault = '';
 }
 
-$pageTitle = $isNew ? 'Ny skill (AI)' : 'AI: ' . pathinfo($filename, PATHINFO_FILENAME);
+$pageTitle = $isNew ? __('ai.page_new') : __('ai.page_edit', ['name' => pathinfo($filename, PATHINFO_FILENAME)]);
 
 $defaultEntry = '';
 foreach (array_keys($initialFiles) as $n) {
@@ -157,7 +131,7 @@ $aiDefaultsJson = json_encode([
 $switchToEditUrl = $isNew ? '../edit/' : ('../edit/?file=' . rawurlencode($filename));
 ?>
 <!DOCTYPE html>
-<html lang="sv" data-theme="light">
+<html lang="<?= h(skill_lang_html_lang()) ?>" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -268,22 +242,22 @@ html,body{height:100%;overflow:hidden}
 <body>
 
 <header class="header">
-  <button class="sidebar-toggle" type="button" onclick="toggleSidebar()" aria-label="Visa verktyg">🛠️</button>
+  <button class="sidebar-toggle" type="button" onclick="toggleSidebar()" aria-label="<?= h(__('common.show_tools')) ?>">🛠️</button>
   <a href="../" style="display:flex;align-items:center;gap:10px;text-decoration:none">
     <div class="logo-mark">🤖</div>
-    <div class="logo-text"><?= h(APP_NAME) ?><span class="logo-sub">AI-redigering</span></div>
+    <div class="logo-text"><?= h(APP_NAME) ?><span class="logo-sub"><?= h(__('ai.logo_sub')) ?></span></div>
   </a>
   <div class="hdr-sep"></div>
   <div class="hdr-title"><?= h($pageTitle) ?></div>
   <div class="hdr-actions">
-    <a href="<?= h($switchToEditUrl) ?>" class="btn btn-sm btn-teal btn-switch-mode" title="<?= $isNew ? 'Byt till klassisk redigering (ny tom skill)' : 'Öppna samma arkiv i klassisk redigering' ?>">✏️ Byt till klassisk redigering</a>
+    <a href="<?= h($switchToEditUrl) ?>" class="btn btn-sm btn-teal btn-switch-mode" title="<?= h($isNew ? __('ai.switch_classic_title_new') : __('ai.switch_classic_title')) ?>">✏️ <?= h(__('ai.switch_classic')) ?></a>
     <?php if (!$isNew): ?>
-    <a href="../view/?file=<?= urlencode($filename) ?>" class="btn btn-white btn-sm">👁 Visa</a>
+    <a href="../view/?file=<?= urlencode($filename) ?>" class="btn btn-white btn-sm">👁 <?= h(__('common.view')) ?></a>
     <?php endif; ?>
-    <a href="../" class="btn btn-white btn-sm">← Tillbaka</a>
-    <a href="../logout.php" class="btn btn-white btn-sm" onclick="return confirm('Logga ut?')">🔓 Logga ut</a>
-    <button class="help-btn" type="button" onclick="openHelp()" title="Hjälp">?</button>
-    <button class="theme-btn" type="button" onclick="toggleTheme()" title="Tema">🌓</button>
+    <a href="../" class="btn btn-white btn-sm">← <?= h(__('common.back')) ?></a>
+    <a href="../logout.php" class="btn btn-white btn-sm" onclick="return confirm(<?= json_encode(__('common.confirm_logout'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_UNESCAPED_UNICODE) ?>)">🔓 <?= h(__('common.logout')) ?></a>
+    <button class="help-btn" type="button" onclick="openHelp()" title="<?= h(__('ai.help_title')) ?>">?</button>
+    <button class="theme-btn" type="button" onclick="toggleTheme()" title="<?= h(__('common.theme_title')) ?>">🌓</button>
   </div>
 </header>
 
@@ -292,15 +266,15 @@ html,body{height:100%;overflow:hidden}
 <div class="workspace">
   <div class="sidebar mobile-hidden" id="sidebar">
     <div class="sb-hdr">
-      <label>Filnamn (.skill)</label>
+      <label><?= h(__('edit.sidebar_filename')) ?></label>
       <input type="text" id="skill-name-input" class="skill-name-input"
-             value="<?= h($skillNameDefault) ?>" placeholder="min-skill">
+             value="<?= h($skillNameDefault) ?>" placeholder="<?= h(__('edit.placeholder_name')) ?>">
       <div class="sb-btn-row">
-        <button type="button" class="btn btn-xs btn-success" style="flex:1" onclick="saveSkill()">💾 Spara</button>
-        <button type="button" class="btn btn-xs btn-secondary" onclick="addFile()">+ Fil</button>
+        <button type="button" class="btn btn-xs btn-success" style="flex:1" onclick="saveSkill()">💾 <?= h(__('common.save')) ?></button>
+        <button type="button" class="btn btn-xs btn-secondary" onclick="addFile()"><?= h(__('edit.btn_add_file')) ?></button>
       </div>
     </div>
-    <div class="tree-section-hdr"><span>Filer i arkivet</span></div>
+    <div class="tree-section-hdr"><span><?= h(__('edit.tree_header')) ?></span></div>
     <div class="tree-wrap" id="tree-wrap"></div>
   </div>
 
@@ -316,53 +290,53 @@ html,body{height:100%;overflow:hidden}
     <?php endif; ?>
 
     <div class="etoolbar">
-      <span class="etoolbar-label" id="current-file-label">Väljer fil…</span>
+      <span class="etoolbar-label" id="current-file-label"><?= h(__('edit.current_file_loading')) ?></span>
       <div class="provider-row">
         <span class="prov-lbl">AI</span>
         <button type="button" class="btn btn-xs btn-secondary prov-btn" data-prov="openai">OpenAI</button>
         <button type="button" class="btn btn-xs btn-secondary prov-btn" data-prov="ollama">Ollama</button>
         <button type="button" class="btn btn-xs btn-secondary prov-btn" data-prov="lmstudio">LM Studio</button>
-        <input type="text" id="ai-model" class="ai-model-input" placeholder="modell" title="Modellnamn" autocomplete="off">
-        <label id="wrap-local-ai" class="local-ai-wrap" title="Bocka ur om PHP-servern ska proxy:a mot Ollama/LM Studio (VPN m.m.)">
+        <input type="text" id="ai-model" class="ai-model-input" placeholder="<?= h(__('ai.model_placeholder')) ?>" title="<?= h(__('ai.model_title')) ?>" autocomplete="off">
+        <label id="wrap-local-ai" class="local-ai-wrap" title="<?= h(__('ai.local_browser_title')) ?>">
           <input type="checkbox" id="chk-local-ai" />
-          <span>Lokal (webbläsare)</span>
+          <span><?= h(__('ai.local_browser')) ?></span>
         </label>
-        <button type="button" class="btn btn-xs btn-secondary" onclick="openAiSettings()" title="Systemprompt & AI">⚙️ AI-inställningar</button>
+        <button type="button" class="btn btn-xs btn-secondary" onclick="openAiSettings()" title="<?= h(__('ai.settings_btn_title')) ?>">⚙️ <?= h(__('ai.settings_btn')) ?></button>
       </div>
-      <button type="button" class="btn btn-sm btn-secondary" id="btn-rename-file" onclick="if(currentFile)renameMoveFile(currentFile)">📂 Namn</button>
-      <button type="button" class="btn btn-sm btn-secondary" id="btn-delete-file" onclick="if(currentFile)removeFile(currentFile)">🗑 Ta bort</button>
-      <button type="button" class="btn btn-sm btn-secondary" onclick="insertTemplate()">📋 Mall</button>
-      <button type="button" class="btn btn-sm btn-secondary" onclick="formatDoc()">✨ Formatera</button>
-      <button type="button" class="btn btn-sm btn-success" onclick="saveSkill()">💾 Spara</button>
+      <button type="button" class="btn btn-sm btn-secondary" id="btn-rename-file" onclick="if(currentFile)renameMoveFile(currentFile)">📂 <?= h(__('edit.rename_btn')) ?></button>
+      <button type="button" class="btn btn-sm btn-secondary" id="btn-delete-file" onclick="if(currentFile)removeFile(currentFile)">🗑 <?= h(__('edit.delete_btn')) ?></button>
+      <button type="button" class="btn btn-sm btn-secondary" onclick="insertTemplate()">📋 <?= h(__('edit.template')) ?></button>
+      <button type="button" class="btn btn-sm btn-secondary" onclick="formatDoc()">✨ <?= h(__('edit.format')) ?></button>
+      <button type="button" class="btn btn-sm btn-success" onclick="saveSkill()">💾 <?= h(__('common.save')) ?></button>
     </div>
 
     <div class="ai-work">
       <div class="editor-wrap">
         <div class="emain">
           <div class="eleft">
-            <div class="pane-hdr">✏️ Editor <span class="lang-badge" id="lang-badge">markdown</span></div>
+            <div class="pane-hdr">✏️ <?= h(__('edit.editor_pane')) ?> <span class="lang-badge" id="lang-badge">markdown</span></div>
             <div id="monaco-container"></div>
           </div>
         </div>
       </div>
 
       <aside class="ai-panel" id="ai-panel">
-        <div class="ai-panel-hdr">Assistent</div>
+        <div class="ai-panel-hdr"><?= h(__('ai.panel_title')) ?></div>
         <div class="ai-messages" id="ai-messages"></div>
         <div class="ai-input-wrap">
           <div class="ai-attach-bar">
-            <button type="button" class="btn btn-primary ai-attach-btn" onclick="includeFileInAi()" title="Lägger in hela filens innehåll i prompten nedan">
-              📎 Lägg aktuell fil i prompten
+            <button type="button" class="btn btn-primary ai-attach-btn" onclick="includeFileInAi()" title="<?= h(__('ai.attach_title')) ?>">
+              📎 <?= h(__('ai.attach_btn')) ?>
             </button>
             <p class="ai-attach-hint">
-              Använd denna knapp för att skicka med innehållet från editorn till AI (t.ex. hela <code>SKILL.md</code>). Aktuell fil: <span class="ai-attach-file" id="ai-attach-filename">—</span>
+              <?= __('ai.attach_hint') ?><span class="ai-attach-file" id="ai-attach-filename">—</span>
             </p>
           </div>
-          <textarea id="ai-user-input" class="ai-user-input" placeholder="Skriv vad AI ska göra med filen — eller börja med knappen ovan…"></textarea>
+          <textarea id="ai-user-input" class="ai-user-input" placeholder="<?= h(__('ai.user_placeholder')) ?>"></textarea>
           <div class="ai-actions">
-            <button type="button" class="btn btn-sm btn-primary" id="ai-send-btn" onclick="sendAiChat()">Skicka</button>
-            <button type="button" class="btn btn-sm btn-secondary" onclick="applyLastAssistantToEditor(false)">Infoga svar</button>
-            <button type="button" class="btn btn-sm btn-secondary" onclick="applyLastAssistantToEditor(true)">Ersätt hela filen</button>
+            <button type="button" class="btn btn-sm btn-primary" id="ai-send-btn" onclick="sendAiChat()"><?= h(__('ai.send')) ?></button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="applyLastAssistantToEditor(false)"><?= h(__('ai.insert')) ?></button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="applyLastAssistantToEditor(true)"><?= h(__('ai.replace_all')) ?></button>
             <span class="ai-status" id="ai-status"></span>
           </div>
         </div>
@@ -371,17 +345,17 @@ html,body{height:100%;overflow:hidden}
   </div>
 </div>
 
-<footer><?= h(APP_NAME) ?> · AI · <?= $isNew ? 'Ny skill' : h($filename) ?></footer>
+<footer><?= h(APP_NAME) ?> · AI · <?= $isNew ? h(__('ai.footer_new')) : h($filename) ?></footer>
 
 <div class="modal-overlay hidden" id="help-modal" onclick="if(event.target===this)closeHelp()">
   <div class="modal-box">
     <div class="modal-hdr">
-      <span class="modal-hdr-title">📘 Hjälp</span>
+      <span class="modal-hdr-title">📘 <?= h(__('ai.help_modal')) ?></span>
       <button type="button" class="btn btn-xs btn-secondary" onclick="closeHelp()">✕</button>
     </div>
     <div class="modal-body"><div class="md" id="help-content"></div></div>
     <div class="modal-footer">
-      <button type="button" class="btn btn-sm btn-primary" onclick="closeHelp()">Stäng</button>
+      <button type="button" class="btn btn-sm btn-primary" onclick="closeHelp()"><?= h(__('common.close')) ?></button>
     </div>
   </div>
 </div>
@@ -389,26 +363,23 @@ html,body{height:100%;overflow:hidden}
 <div class="modal-overlay hidden" id="ai-settings-modal" onclick="if(event.target===this)closeAiSettings()">
   <div class="modal-box">
     <div class="modal-hdr">
-      <span class="modal-hdr-title">⚙️ AI-inställningar</span>
+      <span class="modal-hdr-title">⚙️ <?= h(__('ai.settings_modal')) ?></span>
       <button type="button" class="btn btn-xs btn-secondary" onclick="closeAiSettings()">✕</button>
     </div>
     <div class="modal-body">
       <p style="font-size:.85rem;color:var(--text-2);margin-bottom:10px">
-        Systemprompten styr hur modellen skriver och redigerar SKILL.md (frontmatter, struktur, stil).
-        <strong>Ollama / LM Studio:</strong> som standard skickas frågor <strong>direkt från webbläsaren</strong> till din dator (<code>127.0.0.1</code>), så PHP-servern på internet behöver inte nå Ollama. Bocka ur &quot;Lokal (webbläsare)&quot; i verktygsraden om du vill att <code>chat.php</code> på servern ska proxy:a (kräver att <code>OLLAMA_BASE</code> i <code>key.env</code> nås från servern).
-        <strong>OpenAI:</strong> går alltid via servern; nyckel i <code>config/key.env</code>.
-        Vid <strong>HTTPS</strong>-sajt kan vissa webbläsare blockera anrop till <code>http://127.0.0.1</code> (mixed content) — öppna då appen via HTTP lokalt eller använd server-proxy.
+        <?= __('ai.settings_intro') ?>
       </p>
-      <label class="prov-lbl" style="display:block;margin-bottom:6px;margin-top:12px">Lokal Ollama-URL (webbläsare)</label>
+      <label class="prov-lbl" style="display:block;margin-bottom:6px;margin-top:12px"><?= h(__('ai.label_ollama')) ?></label>
       <input type="text" id="ai-settings-ollama-browser-base" class="skill-name-input" style="margin-bottom:10px;font-family:Consolas,monospace;font-size:.78rem" placeholder="http://127.0.0.1:11434/v1" autocomplete="off">
-      <label class="prov-lbl" style="display:block;margin-bottom:6px">Lokal LM Studio-URL (webbläsare)</label>
+      <label class="prov-lbl" style="display:block;margin-bottom:6px"><?= h(__('ai.label_lmstudio')) ?></label>
       <input type="text" id="ai-settings-lmstudio-browser-base" class="skill-name-input" style="margin-bottom:10px;font-family:Consolas,monospace;font-size:.78rem" placeholder="http://127.0.0.1:1234/v1" autocomplete="off">
-      <label class="prov-lbl" style="display:block;margin-bottom:6px">Systemprompt</label>
+      <label class="prov-lbl" style="display:block;margin-bottom:6px"><?= h(__('ai.label_system')) ?></label>
       <textarea id="ai-settings-prompt" class="ai-settings-text" spellcheck="false"></textarea>
     </div>
     <div class="modal-footer">
-      <button type="button" class="btn btn-sm btn-secondary" onclick="resetSystemPrompt()">Återställ standard</button>
-      <button type="button" class="btn btn-sm btn-primary" onclick="saveAiSettings()">Spara</button>
+      <button type="button" class="btn btn-sm btn-secondary" onclick="resetSystemPrompt()"><?= h(__('ai.reset_prompt')) ?></button>
+      <button type="button" class="btn btn-sm btn-primary" onclick="saveAiSettings()"><?= h(__('ai.save')) ?></button>
     </div>
   </div>
 </div>
@@ -417,6 +388,39 @@ html,body{height:100%;overflow:hidden}
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.47.0/min/vs/loader.js"></script>
 <script>
+var EDIT_LANG = {
+  treeRename: <?= json_encode(__('edit.tree_rename'), JSON_UNESCAPED_UNICODE) ?>,
+  treeRenameAria: <?= json_encode(__('edit.tree_rename_aria'), JSON_UNESCAPED_UNICODE) ?>,
+  treeDelete: <?= json_encode(__('edit.tree_delete'), JSON_UNESCAPED_UNICODE) ?>,
+  treeDeleteAria: <?= json_encode(__('edit.tree_delete_aria'), JSON_UNESCAPED_UNICODE) ?>,
+  alertFilename: <?= json_encode(__('edit.alert_filename'), JSON_UNESCAPED_UNICODE) ?>,
+  alertNoFiles: <?= json_encode(__('edit.alert_no_files'), JSON_UNESCAPED_UNICODE) ?>,
+  promptNewFile: <?= json_encode(__('edit.prompt_new_file'), JSON_UNESCAPED_UNICODE) ?>,
+  alertBadName: <?= json_encode(__('edit.alert_bad_name'), JSON_UNESCAPED_UNICODE) ?>,
+  alertMinFile: <?= json_encode(__('edit.alert_min_file'), JSON_UNESCAPED_UNICODE) ?>,
+  confirmRemove: <?= json_encode(__('edit.confirm_remove'), JSON_UNESCAPED_UNICODE) ?>,
+  promptRename: <?= json_encode(__('edit.prompt_rename'), JSON_UNESCAPED_UNICODE) ?>,
+  alertBadPath: <?= json_encode(__('edit.alert_bad_path'), JSON_UNESCAPED_UNICODE) ?>,
+  alertPathExists: <?= json_encode(__('edit.alert_path_exists'), JSON_UNESCAPED_UNICODE) ?>,
+  templateConfirm: <?= json_encode(__('edit.template_confirm'), JSON_UNESCAPED_UNICODE) ?>
+};
+var AI_LANG = {
+  includeBlockHeader: <?= json_encode(__('ai.include_block_header'), JSON_UNESCAPED_UNICODE) ?>,
+  includeIntro: <?= json_encode(__('ai.include_intro'), JSON_UNESCAPED_UNICODE) ?>,
+  statusSending: <?= json_encode(__('ai.status_sending'), JSON_UNESCAPED_UNICODE) ?>,
+  statusDone: <?= json_encode(__('ai.status_done'), JSON_UNESCAPED_UNICODE) ?>,
+  errEmpty: <?= json_encode(__('ai.err_empty_response'), JSON_UNESCAPED_UNICODE) ?>,
+  errUnknownShort: <?= json_encode(__('ai.err_unknown_short'), JSON_UNESCAPED_UNICODE) ?>,
+  errInvalidAnswer: <?= json_encode(__('ai.err_invalid_answer'), JSON_UNESCAPED_UNICODE) ?>,
+  helpEmpty: <?= json_encode(__('ai.help_empty'), JSON_UNESCAPED_UNICODE) ?>,
+  alertInstruction: <?= json_encode(__('ai.alert_instruction'), JSON_UNESCAPED_UNICODE) ?>,
+  alertModel: <?= json_encode(__('ai.alert_model'), JSON_UNESCAPED_UNICODE) ?>,
+  alertLocalBase: <?= json_encode(__('ai.alert_local_base'), JSON_UNESCAPED_UNICODE) ?>,
+  alertNoReply: <?= json_encode(__('ai.alert_no_reply'), JSON_UNESCAPED_UNICODE) ?>,
+  errPrefix: <?= json_encode(__('common.error_prefix'), JSON_UNESCAPED_UNICODE) ?>,
+  errNet: <?= json_encode(__('common.error_network'), JSON_UNESCAPED_UNICODE) ?>,
+  errNetLocal: <?= json_encode(__('common.error_network_local'), JSON_UNESCAPED_UNICODE) ?>
+};
 marked.setOptions({ breaks: true, gfm: true });
 mermaid.initialize({ startOnLoad: false, theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default' });
 
@@ -436,6 +440,7 @@ function processMermaid(container) {
   mermaid.run({ nodes: container.querySelectorAll('.mermaid') }).catch(function() {});
 }
 
+var SKILL_MD_TEMPLATE = <?= json_encode(skill_default_skill_md_template(), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS) ?>;
 var aiDefaults = <?= $aiDefaultsJson ?>;
 var initialFiles = <?= json_encode($initialFiles, JSON_UNESCAPED_UNICODE) ?>;
 var skillArchivePrefix = <?= json_encode($skillArchivePrefix, JSON_UNESCAPED_UNICODE) ?>;
@@ -744,11 +749,12 @@ function includeFileInAi() {
   if (!monacoEditor || !currentFile) return;
   var ta = document.getElementById('ai-user-input');
   var raw = monacoEditor.getValue();
+  var hdr = AI_LANG.includeBlockHeader.replace(/\{file\}/g, currentFile);
   var block =
-    '\n\n=== Inkluderad fil: ' + currentFile + ' ===\n' +
+    hdr +
     wrapFileContentForPrompt(raw) +
     '\n';
-  ta.value = (ta.value.trim() ? ta.value.trim() + '\n\n' : '') + 'Här är innehållet i filen:\n' + block;
+  ta.value = (ta.value.trim() ? ta.value.trim() + '\n\n' : '') + AI_LANG.includeIntro + block;
   ta.focus();
 }
 
@@ -768,13 +774,13 @@ function extractMarkdownFromFence(text) {
 function sendAiChat() {
   var userText = document.getElementById('ai-user-input').value.trim();
   if (!userText) {
-    alert('Skriv en instruktion först.');
+    alert(AI_LANG.alertInstruction);
     return;
   }
   var provider = getProvider();
   var model = document.getElementById('ai-model').value.trim() || getModelForProvider(provider);
   if (!model) {
-    alert('Ange modellnamn (eller sätt standard i config/ai.php).');
+    alert(AI_LANG.alertModel);
     return;
   }
   saveModelForProvider(provider, model);
@@ -787,7 +793,7 @@ function sendAiChat() {
 
   appendAiMessage('user', userText);
   document.getElementById('ai-user-input').value = '';
-  setAiStatus('Skickar…');
+  setAiStatus(AI_LANG.statusSending);
   document.getElementById('ai-send-btn').disabled = true;
 
   var useLocal = (provider === 'ollama' || provider === 'lmstudio') && getLocalModeForProvider(provider);
@@ -796,12 +802,12 @@ function sendAiChat() {
     document.getElementById('ai-send-btn').disabled = false;
     lastAssistantText = content || '';
     appendAiMessage('assistant', lastAssistantText);
-    setAiStatus('Klar');
+    setAiStatus(AI_LANG.statusDone);
   }
   function finishErr(msg) {
     document.getElementById('ai-send-btn').disabled = false;
     setAiStatus('');
-    appendAiMessage('assistant', 'Fel: ' + msg);
+    appendAiMessage('assistant', AI_LANG.errPrefix + msg);
   }
 
   if (useLocal) {
@@ -809,7 +815,7 @@ function sendAiChat() {
     if (!base) {
       document.getElementById('ai-send-btn').disabled = false;
       setAiStatus('');
-      alert('Sätt bas-URL för lokal ' + provider + ' under AI-inställningar.');
+      alert(AI_LANG.alertLocalBase.replace(/\{provider\}/g, provider));
       return;
     }
     var url = base + '/chat/completions';
@@ -824,7 +830,7 @@ function sendAiChat() {
           try {
             j = JSON.parse(t);
           } catch (e) {
-            finishErr(t ? t.substring(0, 400) : r.statusText || 'Ogiltigt svar');
+            finishErr(t ? t.substring(0, 400) : r.statusText || AI_LANG.errInvalidAnswer);
             return;
           }
           if (!r.ok) {
@@ -835,7 +841,7 @@ function sendAiChat() {
           }
           var content = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
           if (!content) {
-            finishErr('Tomt svar från modellen.');
+            finishErr(AI_LANG.errEmpty);
             return;
           }
           finishOk(content);
@@ -844,7 +850,7 @@ function sendAiChat() {
       .catch(function(e) {
         document.getElementById('ai-send-btn').disabled = false;
         setAiStatus('');
-        appendAiMessage('assistant', 'Nätverksfel (lokalt): ' + (e && e.message ? e.message : e));
+        appendAiMessage('assistant', AI_LANG.errNetLocal + (e && e.message ? e.message : e));
       });
     return;
   }
@@ -859,23 +865,23 @@ function sendAiChat() {
       document.getElementById('ai-send-btn').disabled = false;
       if (!data.ok) {
         setAiStatus('');
-        appendAiMessage('assistant', 'Fel: ' + (data.error || 'Okänt'));
+        appendAiMessage('assistant', AI_LANG.errPrefix + (data.error || AI_LANG.errUnknownShort));
         return;
       }
       lastAssistantText = data.content || '';
       appendAiMessage('assistant', lastAssistantText);
-      setAiStatus('Klar');
+      setAiStatus(AI_LANG.statusDone);
     })
     .catch(function(e) {
       document.getElementById('ai-send-btn').disabled = false;
       setAiStatus('');
-      appendAiMessage('assistant', 'Nätverksfel: ' + e);
+      appendAiMessage('assistant', AI_LANG.errNet + e);
     });
 }
 
 function applyLastAssistantToEditor(replaceAll) {
   if (!monacoEditor || !lastAssistantText) {
-    alert('Inget assistentsvar att infoga.');
+    alert(AI_LANG.alertNoReply);
     return;
   }
   var inner = extractMarkdownFromFence(lastAssistantText);
@@ -967,13 +973,15 @@ function renderNode(node, depth, wrap, active, pathCount) {
     var btnRen = document.createElement('button');
     btnRen.type = 'button';
     btnRen.className = 'tree-op-btn';
-    btnRen.title = 'Byt namn / flytta';
+    btnRen.title = EDIT_LANG.treeRename;
+    btnRen.setAttribute('aria-label', EDIT_LANG.treeRenameAria);
     btnRen.textContent = '✏️';
     btnRen.onclick = function(e) { e.stopPropagation(); renameMoveFile(fp); };
     var btnDel = document.createElement('button');
     btnDel.type = 'button';
     btnDel.className = 'tree-op-btn';
-    btnDel.title = 'Ta bort fil';
+    btnDel.title = EDIT_LANG.treeDelete;
+    btnDel.setAttribute('aria-label', EDIT_LANG.treeDeleteAria);
     btnDel.textContent = '🗑';
     btnDel.onclick = function(e) { e.stopPropagation(); removeFile(fp); };
     btnDel.disabled = pathCount <= 1;
@@ -1013,22 +1021,22 @@ function getAllEdits() {
 function saveSkill() {
   var name = document.getElementById('skill-name-input').value.trim();
   if (!name) {
-    alert('Ange ett filnamn för skill-filen.');
+    alert(EDIT_LANG.alertFilename);
     document.getElementById('skill-name-input').focus();
     return;
   }
   var all = getAllEdits();
-  if (Object.keys(all).length === 0) { alert('Det finns inga filer att spara.'); return; }
+  if (Object.keys(all).length === 0) { alert(EDIT_LANG.alertNoFiles); return; }
   document.getElementById('form-skill-name').value = name;
   document.getElementById('form-files-json').value = JSON.stringify(all);
   document.getElementById('skill-form').submit();
 }
 
 function addFile() {
-  var name = prompt('Nytt filnamn i arkivet\n(t.ex. references/README.md):');
+  var name = prompt(EDIT_LANG.promptNewFile);
   if (!name) return;
   name = normalizeArchivePath(name, currentFile);
-  if (!name) { alert('Ogiltigt filnamn.'); return; }
+  if (!name) { alert(EDIT_LANG.alertBadName); return; }
   if (getAllPaths().indexOf(name) !== -1) { selectFile(name); return; }
   removedFromArchive.delete(name);
   edits[name] = '';
@@ -1039,10 +1047,10 @@ function addFile() {
 function removeFile(path) {
   var all = getAllPaths();
   if (all.length <= 1) {
-    alert('Arkivet måste innehålla minst en fil.');
+    alert(EDIT_LANG.alertMinFile);
     return;
   }
-  if (!confirm('Ta bort filen «' + path + '» från arkivet?')) return;
+  if (!confirm(EDIT_LANG.confirmRemove.replace('{path}', path))) return;
   var next = all.filter(function(p) { return p !== path; })[0];
   removedFromArchive.add(path);
   delete edits[path];
@@ -1059,13 +1067,13 @@ function removeFile(path) {
 }
 
 function renameMoveFile(oldPath) {
-  var name = prompt('Ny sökväg i arkivet:', oldPath);
+  var name = prompt(EDIT_LANG.promptRename, oldPath);
   if (name == null) return;
   name = normalizeArchivePath(name, oldPath);
-  if (!name) { alert('Ogiltig sökväg.'); return; }
+  if (!name) { alert(EDIT_LANG.alertBadPath); return; }
   if (name === oldPath) return;
   if (getAllPaths().indexOf(name) !== -1) {
-    alert('Det finns redan en fil med den sökvägen.');
+    alert(EDIT_LANG.alertPathExists);
     return;
   }
   var content = '';
@@ -1091,38 +1099,9 @@ function renameMoveFile(oldPath) {
   else updateFileActionButtons();
 }
 
-var SKILL_MD_TEMPLATE = [
-  '---',
-  'name:',
-  'title:',
-  'description:',
-  'author:',
-  'version: 1.0.0',
-  'tags:',
-  '---',
-  '',
-  '# Ny skill',
-  '',
-  '## Syfte',
-  '',
-  'Beskriv vad denna skill gör och när den används.',
-  '',
-  '## Instruktioner',
-  '',
-  '1. Steg ett',
-  '2. Steg två',
-  '',
-  '## Exempel',
-  '',
-  '```',
-  '# Exempel',
-  '```',
-  '',
-].join('\n');
-
 function insertTemplate() {
   if (!monacoEditor) return;
-  if (monacoEditor.getValue().trim() && !confirm('Ersätt innehållet med mallen?')) return;
+  if (monacoEditor.getValue().trim() && !confirm(EDIT_LANG.templateConfirm)) return;
   var fname = (currentFile || '').split('/').pop() || '';
   var isSkillMd = /^SKILL\.md$/i.test(fname);
   if (isSkillMd) {
@@ -1146,7 +1125,7 @@ function formatDoc() {
 function openHelp() {
   var el = document.getElementById('help-content');
   if (!el._rendered) {
-    el.innerHTML = marked.parse(helpMd || '_Ingen hjälptext hittades._');
+    el.innerHTML = marked.parse(helpMd || AI_LANG.helpEmpty);
     processMermaid(el);
     el._rendered = true;
   }

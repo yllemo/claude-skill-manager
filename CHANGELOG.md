@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-04-09
+
+### Added
+- **UI localization (i18n)** — Interface strings for the web app (labels, buttons, validation and API errors, etc.) with built-in **Swedish** (`sv`) and **English** (`en`) in `_lang.php`
+- **`config/lang.php`** — Set `locale` (`sv` or `en`; default **Swedish** if the file is missing) and optional `strings` overrides per language key; additional language codes supported by supplying translations under `strings` (missing keys fall back to Swedish built-ins)
+- **`__()` helper** — Lookup translated strings with optional `{placeholder}` replacement
+- **`skill_default_skill_md_template()`** — Locale-aware default content for new `SKILL.md` files (Swedish vs English scaffold)
+- **README** — Documented language configuration and project structure entries for `_lang.php` and `config/lang.php`
+
+### Changed
+- **Pages updated for i18n** — `index.php`, `login.php`, `download_content.php`, `view/index.php`, `edit/index.php`, `ai/index.php`, `ai/chat.php`; shared ZIP validation messages in `_common.php`
+- **Client-side copy** — Dashboard result bar, view (Mermaid/copy), edit, and AI editor expose translated strings to JavaScript where needed
+
 ## [1.2.1] - 2026-04-08
 
 ### Enhanced

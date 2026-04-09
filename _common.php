@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/_lang.php';
+
 define('CONTENT_DIR', __DIR__ . '/content/');
 define('APP_NAME', 'Skill Manager');
 
@@ -63,11 +65,11 @@ function skill_archive_root_prefix_from_paths(array $entryPaths): string {
  */
 function validate_skill_upload_archive(string $zipPath): ?string {
     if (!class_exists('ZipArchive')) {
-        return 'ZipArchive saknas på servern.';
+        return __('err.ziparchive_missing');
     }
     $zip = new ZipArchive();
     if ($zip->open($zipPath) !== true) {
-        return 'Kunde inte läsa arkivet.';
+        return __('err.could_not_read_archive');
     }
     $allowed = ['md', 'txt'];
     $fileCount = 0;
@@ -80,12 +82,12 @@ function validate_skill_upload_archive(string $zipPath): ?string {
         $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
         if ($ext === '' || !in_array($ext, $allowed, true)) {
             $zip->close();
-            return 'Otillåten fil i arkivet: ' . $name . ' (endast .md och .txt tillåts vid uppladdning).';
+            return __('err.forbidden_file', ['name' => $name]);
         }
     }
     $zip->close();
     if ($fileCount === 0) {
-        return 'Arkivet innehåller inga filer.';
+        return __('err.archive_empty');
     }
     return null;
 }
@@ -103,12 +105,12 @@ function create_skill_from_uploaded_zip(string $tmpZipPath, string $destSkillPat
     $allowed = ['md', 'txt'];
     $zipIn = new ZipArchive();
     if ($zipIn->open($tmpZipPath) !== true) {
-        return 'Kunde inte läsa zip-filen.';
+        return __('err.could_not_read_zip');
     }
     $zipOut = new ZipArchive();
     if ($zipOut->open($destSkillPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
         $zipIn->close();
-        return 'Kunde inte skapa .skill-fil.';
+        return __('err.could_not_create_skill');
     }
     $added = 0;
     for ($i = 0; $i < $zipIn->numFiles; $i++) {
@@ -134,7 +136,7 @@ function create_skill_from_uploaded_zip(string $tmpZipPath, string $destSkillPat
         if (is_file($destSkillPath)) {
             unlink($destSkillPath);
         }
-        return 'Inga .md- eller .txt-filer kunde packas.';
+        return __('err.no_md_txt');
     }
     return null;
 }

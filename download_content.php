@@ -11,7 +11,7 @@ skill_require_auth('login.php');
 if (!class_exists('ZipArchive')) {
     header('HTTP/1.1 500 Internal Server Error');
     header('Content-Type: text/plain; charset=UTF-8');
-    echo 'ZipArchive saknas på servern.';
+    echo __('dlc.err_zip');
     exit;
 }
 
@@ -19,7 +19,7 @@ $base = realpath(CONTENT_DIR);
 if ($base === false || !is_dir($base)) {
     header('HTTP/1.1 500 Internal Server Error');
     header('Content-Type: text/plain; charset=UTF-8');
-    echo 'Content-katalogen saknas.';
+    echo __('dlc.err_no_content');
     exit;
 }
 
@@ -27,7 +27,7 @@ $tmp = tempnam(sys_get_temp_dir(), 'skcontent');
 if ($tmp === false) {
     header('HTTP/1.1 500 Internal Server Error');
     header('Content-Type: text/plain; charset=UTF-8');
-    echo 'Kunde inte skapa temporär fil.';
+    echo __('dlc.err_tmp');
     exit;
 }
 
@@ -36,7 +36,7 @@ if ($zip->open($tmp, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
     @unlink($tmp);
     header('HTTP/1.1 500 Internal Server Error');
     header('Content-Type: text/plain; charset=UTF-8');
-    echo 'Kunde inte skapa zip-arkiv.';
+    echo __('dlc.err_zip_create');
     exit;
 }
 
@@ -76,7 +76,7 @@ if ($size === false) {
     @unlink($tmp);
     header('HTTP/1.1 500 Internal Server Error');
     header('Content-Type: text/plain; charset=UTF-8');
-    echo 'Kunde inte läsa arkivet.';
+    echo __('dlc.err_read');
     exit;
 }
 

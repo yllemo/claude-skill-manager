@@ -42,7 +42,7 @@ $tags      = !empty($skillMeta['tags']) ? array_map('trim', explode(',', $skillM
 $loginBack = 'view/?file=' . rawurlencode($filename);
 ?>
 <!DOCTYPE html>
-<html lang="sv" data-theme="light">
+<html lang="<?= h(skill_lang_html_lang()) ?>" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -287,31 +287,31 @@ html,body{height:100%;overflow:hidden}
 <body>
 
 <header class="header">
-  <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Visa filträd">
-    📁 Filer
+  <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="<?= h(__('view.sidebar_toggle_tree')) ?>">
+    📁 <?= h(__('view.sidebar_files')) ?>
   </button>
   <a href="../" style="display:flex;align-items:center;gap:10px;text-decoration:none">
     <div class="logo-mark">📘</div>
-    <div class="logo-text"><?= h(APP_NAME) ?><span class="logo-sub">Visa skill</span></div>
+    <div class="logo-text"><?= h(APP_NAME) ?><span class="logo-sub"><?= h(__('view.logo_sub')) ?></span></div>
   </a>
   <div class="hdr-sep"></div>
   <div class="hdr-title"><?= h($title) ?></div>
   <div class="hdr-actions">
-    <a href="../" class="btn btn-white btn-sm">← Tillbaka</a>
+    <a href="../" class="btn btn-white btn-sm">← <?= h(__('common.back')) ?></a>
     <?php if ($isAuthed): ?>
-    <a href="../edit/?file=<?= urlencode($filename) ?>" class="btn btn-white btn-sm">✏️ Redigera</a>
+    <a href="../edit/?file=<?= urlencode($filename) ?>" class="btn btn-white btn-sm">✏️ <?= h(__('common.edit')) ?></a>
     <?php else: ?>
-    <a href="../login.php?back=<?= urlencode($loginBack) ?>" class="btn btn-white btn-sm">🔐 Logga in</a>
+    <a href="../login.php?back=<?= urlencode($loginBack) ?>" class="btn btn-white btn-sm">🔐 <?= h(__('common.login')) ?></a>
     <?php endif; ?>
     <details class="hdr-split-dl" id="hdr-split-dl">
-      <summary class="btn btn-white btn-sm hdr-split-btn" aria-label="Ladda ner">⬇ Ladda ner ▾</summary>
+      <summary class="btn btn-white btn-sm hdr-split-btn" aria-label="<?= h(__('view.download_aria')) ?>">⬇ <?= h(__('view.download_btn')) ?></summary>
       <div class="hdr-split-menu" role="menu">
-        <a class="hdr-split-opt" href="../download.php?file=<?= urlencode($filename) ?>&amp;ext=skill" role="menuitem">Som .skill</a>
-        <a class="hdr-split-opt" href="../download.php?file=<?= urlencode($filename) ?>&amp;ext=zip" role="menuitem">Som .zip</a>
+        <a class="hdr-split-opt" href="../download.php?file=<?= urlencode($filename) ?>&amp;ext=skill" role="menuitem"><?= h(__('index.dl_as_skill')) ?></a>
+        <a class="hdr-split-opt" href="../download.php?file=<?= urlencode($filename) ?>&amp;ext=zip" role="menuitem"><?= h(__('index.dl_as_zip')) ?></a>
       </div>
     </details>
-    <button class="theme-btn" onclick="toggleTheme()" title="Växla tema">🌓</button>
-    <button class="hamburger-btn" onclick="toggleMobileNav()" aria-label="Meny">
+    <button class="theme-btn" onclick="toggleTheme()" title="<?= h(__('common.theme_toggle')) ?>">🌓</button>
+    <button class="hamburger-btn" onclick="toggleMobileNav()" aria-label="<?= h(__('common.menu')) ?>">
       <span></span>
       <span></span>
       <span></span>
@@ -324,41 +324,41 @@ html,body{height:100%;overflow:hidden}
 <nav class="mobile-nav">
   <div class="mobile-nav-header">
     <div class="mobile-nav-title"><?= h(APP_NAME) ?></div>
-    <div class="mobile-nav-subtitle">Navigation</div>
+    <div class="mobile-nav-subtitle"><?= h(__('common.nav_subtitle')) ?></div>
   </div>
   <div class="mobile-nav-section">
     <a href="../" class="mobile-nav-item">
       <span class="icon">←</span>
-      <span>Tillbaka</span>
+      <span><?= h(__('common.back')) ?></span>
     </a>
     <a href="javascript:void(0)" onclick="toggleSidebar(); closeMobileNav();" class="mobile-nav-item">
       <span class="icon">📁</span>
-      <span>Visa filträd</span>
+      <span><?= h(__('view.sidebar_toggle_tree')) ?></span>
     </a>
     <?php if ($isAuthed): ?>
     <a href="../edit/?file=<?= urlencode($filename) ?>" class="mobile-nav-item">
       <span class="icon">✏️</span>
-      <span>Redigera</span>
+      <span><?= h(__('common.edit')) ?></span>
     </a>
     <?php else: ?>
     <a href="../login.php?back=<?= urlencode($loginBack) ?>" class="mobile-nav-item">
       <span class="icon">🔐</span>
-      <span>Logga in</span>
+      <span><?= h(__('common.login')) ?></span>
     </a>
     <?php endif; ?>
   </div>
   <div class="mobile-nav-section" style="border-top: 1px solid var(--border-l); padding-top: 8px;">
     <a href="../download.php?file=<?= urlencode($filename) ?>&amp;ext=skill" class="mobile-nav-item">
       <span class="icon">⬇️</span>
-      <span>Ladda ner som .skill</span>
+      <span><?= h(__('view.mobile_dl_skill')) ?></span>
     </a>
     <a href="../download.php?file=<?= urlencode($filename) ?>&amp;ext=zip" class="mobile-nav-item">
       <span class="icon">📦</span>
-      <span>Ladda ner som .zip</span>
+      <span><?= h(__('view.mobile_dl_zip')) ?></span>
     </a>
     <a href="javascript:void(0)" onclick="toggleTheme(); closeMobileNav();" class="mobile-nav-item">
       <span class="icon">🌓</span>
-      <span>Växla tema</span>
+      <span><?= h(__('common.theme_toggle')) ?></span>
     </a>
   </div>
 </nav>
@@ -372,20 +372,20 @@ html,body{height:100%;overflow:hidden}
   <div class="sidebar mobile-hidden"  id="sidebar">
     <div class="sb-hdr">
       <div class="sb-title"><?= h($title) ?></div>
-      <div class="sb-meta"><?= $numFiles ?> filer · <?= h(fmt_size($totalSize)) ?></div>
+      <div class="sb-meta"><?= h(__('view.files_count', ['n' => (string)$numFiles, 'size' => fmt_size($totalSize)])) ?></div>
       <div class="sb-actions">
         <?php if ($isAuthed): ?>
-        <a href="../edit/?file=<?= urlencode($filename) ?>" class="btn btn-xs btn-teal">✏️ Redigera</a>
+        <a href="../edit/?file=<?= urlencode($filename) ?>" class="btn btn-xs btn-teal">✏️ <?= h(__('common.edit')) ?></a>
         <?php else: ?>
-        <a href="../login.php?back=<?= urlencode($loginBack) ?>" class="btn btn-xs btn-teal">🔐 Logga in</a>
+        <a href="../login.php?back=<?= urlencode($loginBack) ?>" class="btn btn-xs btn-teal">🔐 <?= h(__('common.login')) ?></a>
         <?php endif; ?>
-        <a href="../" class="btn btn-xs btn-secondary">← Start</a>
+        <a href="../" class="btn btn-xs btn-secondary">← <?= h(__('common.start')) ?></a>
       </div>
     </div>
 
     <?php if (!empty($skillMeta['description'])): ?>
     <div class="sb-section">
-      <div class="sb-section-lbl">Beskrivning</div>
+      <div class="sb-section-lbl"><?= h(__('view.section_description')) ?></div>
       <div style="font-size:.76rem;color:var(--text-2);line-height:1.5;white-space:pre-wrap"><?= h($skillMeta['description']) ?></div>
     </div>
     <?php endif; ?>
@@ -394,7 +394,7 @@ html,body{height:100%;overflow:hidden}
     $metaDisplay = array_filter($skillMeta, fn($v, $k) => $v !== '' && !in_array($k, ['title','description','tags']), ARRAY_FILTER_USE_BOTH);
     if ($metaDisplay): ?>
     <div class="sb-section">
-      <div class="sb-section-lbl">Metadata</div>
+      <div class="sb-section-lbl"><?= h(__('view.section_metadata')) ?></div>
       <?php foreach ($metaDisplay as $k => $v): ?>
       <div class="sb-kv">
         <span class="sb-k"><?= h($k) ?></span>
@@ -406,7 +406,7 @@ html,body{height:100%;overflow:hidden}
 
     <?php if ($tags): ?>
     <div class="sb-section">
-      <div class="sb-section-lbl">Taggar</div>
+      <div class="sb-section-lbl"><?= h(__('view.section_tags')) ?></div>
       <?php foreach ($tags as $tag): ?><span class="tag"><?= h($tag) ?></span><?php endforeach; ?>
     </div>
     <?php endif; ?>
@@ -418,15 +418,15 @@ html,body{height:100%;overflow:hidden}
   <!-- CONTENT -->
   <div class="content-main">
     <div class="ctoolbar">
-      <div class="breadcrumb" id="breadcrumb">Välj en fil till vänster</div>
+      <div class="breadcrumb" id="breadcrumb"><?= h(__('view.breadcrumb_pick')) ?></div>
       <div class="view-seg">
-        <button class="vseg on" id="vseg-r" onclick="setView('rendered')">Renderad</button>
-        <button class="vseg" id="vseg-w" onclick="setView('raw')">Raw</button>
+        <button class="vseg on" id="vseg-r" onclick="setView('rendered')"><?= h(__('view.seg_rendered')) ?></button>
+        <button class="vseg" id="vseg-w" onclick="setView('raw')"><?= h(__('view.seg_raw')) ?></button>
       </div>
-      <button class="btn btn-xs btn-secondary" onclick="copyContent()">📋 Kopiera</button>
+      <button class="btn btn-xs btn-secondary" onclick="copyContent()">📋 <?= h(__('view.copy')) ?></button>
     </div>
     <div class="cbody" id="cbody">
-      <p style="color:var(--text-2);font-size:.85rem">Välj en fil i trädet till vänster.</p>
+      <p style="color:var(--text-2);font-size:.85rem"><?= h(__('view.empty_pick')) ?></p>
     </div>
   </div>
 
@@ -434,16 +434,16 @@ html,body{height:100%;overflow:hidden}
 
 <footer><?= h(APP_NAME) ?> · <?= h($filename) ?> · <?= h(fmt_size((int)filesize($filePath))) ?></footer>
 
-<div id="mermaid-fs" class="hidden" role="dialog" aria-modal="true" aria-label="Mermaid helskärm">
+<div id="mermaid-fs" class="hidden" role="dialog" aria-modal="true" aria-label="<?= h(__('view.mermaid_fs_aria')) ?>">
   <div class="mermaid-fs-bar">
     <div class="mermaid-fs-tabs">
-      <button type="button" class="mermaid-fs-tab on" id="mermaid-fs-tab-diagram" onclick="setMermaidFsPanel('diagram')">Diagram</button>
-      <button type="button" class="mermaid-fs-tab" id="mermaid-fs-tab-code" onclick="setMermaidFsPanel('code')">Kod</button>
+      <button type="button" class="mermaid-fs-tab on" id="mermaid-fs-tab-diagram" onclick="setMermaidFsPanel('diagram')"><?= h(__('view.mermaid_tab_diagram')) ?></button>
+      <button type="button" class="mermaid-fs-tab" id="mermaid-fs-tab-code" onclick="setMermaidFsPanel('code')"><?= h(__('view.mermaid_tab_code')) ?></button>
     </div>
-    <span class="mermaid-fs-hint">Pan: dra med musen · Zoom: mushjul · Dubbelklick: passa in · Esc: stäng</span>
+    <span class="mermaid-fs-hint"><?= h(__('view.mermaid_hint')) ?></span>
     <div class="mermaid-fs-actions" style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-      <button type="button" id="mermaid-fs-fit" onclick="fitMermaidFullscreen()">↺ Passa in</button>
-      <button type="button" id="mermaid-fs-close" onclick="closeMermaidFullscreen()">✕ Stäng</button>
+      <button type="button" id="mermaid-fs-fit" onclick="fitMermaidFullscreen()">↺ <?= h(__('view.mermaid_fit')) ?></button>
+      <button type="button" id="mermaid-fs-close" onclick="closeMermaidFullscreen()">✕ <?= h(__('common.close')) ?></button>
     </div>
   </div>
   <div class="mermaid-fs-body">
@@ -459,6 +459,19 @@ html,body{height:100%;overflow:hidden}
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 <script>
+var VIEW_LANG = {
+  fmLabel: <?= json_encode(__('view.fm_label'), JSON_UNESCAPED_UNICODE) ?>,
+  binaryFile: <?= json_encode(__('view.binary_file'), JSON_UNESCAPED_UNICODE) ?>,
+  binaryPath: <?= json_encode(__('view.binary_path'), JSON_UNESCAPED_UNICODE) ?>,
+  binarySize: <?= json_encode(__('view.binary_size'), JSON_UNESCAPED_UNICODE) ?>,
+  binaryType: <?= json_encode(__('view.binary_type'), JSON_UNESCAPED_UNICODE) ?>,
+  binaryKind: <?= json_encode(__('view.binary_kind'), JSON_UNESCAPED_UNICODE) ?>,
+  mermaidWrapTitle: <?= json_encode(__('view.mermaid_wrap_title'), JSON_UNESCAPED_UNICODE) ?>,
+  mermaidFsAria: <?= json_encode(__('view.mermaid_fs_open_aria'), JSON_UNESCAPED_UNICODE) ?>,
+  mermaidFsTitle: <?= json_encode(__('view.mermaid_fs_open_title'), JSON_UNESCAPED_UNICODE) ?>,
+  mermaidErr: <?= json_encode(__('view.mermaid_error'), JSON_UNESCAPED_UNICODE) ?>,
+  copied: <?= json_encode(__('view.copied'), JSON_UNESCAPED_UNICODE) ?>
+};
 marked.setOptions({ breaks: true, gfm: true });
 mermaid.initialize({ startOnLoad: false, theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default' });
 
@@ -540,7 +553,7 @@ function renderFile(path, view) {
   }
 
   if (file.type === 'binary') {
-    body.innerHTML = '<div class="file-info-box"><div class="fib-icon">' + fIcon(path.split('/').pop()) + '</div><div class="fib-row"><span class="fib-k">Fil</span><span class="fib-v">' + esc(path.split('/').pop()) + '</span></div><div class="fib-row"><span class="fib-k">Sökväg</span><span class="fib-v">' + esc(path) + '</span></div><div class="fib-row"><span class="fib-k">Storlek</span><span class="fib-v">' + fmtSz(file.size) + '</span></div><div class="fib-row"><span class="fib-k">Typ</span><span class="fib-v">Binärfil</span></div></div>';
+    body.innerHTML = '<div class="file-info-box"><div class="fib-icon">' + fIcon(path.split('/').pop()) + '</div><div class="fib-row"><span class="fib-k">' + esc(VIEW_LANG.binaryFile) + '</span><span class="fib-v">' + esc(path.split('/').pop()) + '</span></div><div class="fib-row"><span class="fib-k">' + esc(VIEW_LANG.binaryPath) + '</span><span class="fib-v">' + esc(path) + '</span></div><div class="fib-row"><span class="fib-k">' + esc(VIEW_LANG.binarySize) + '</span><span class="fib-v">' + fmtSz(file.size) + '</span></div><div class="fib-row"><span class="fib-k">' + esc(VIEW_LANG.binaryType) + '</span><span class="fib-v">' + esc(VIEW_LANG.binaryKind) + '</span></div></div>';
     return;
   }
 
@@ -555,7 +568,7 @@ function renderFile(path, view) {
     var parsed = parseFM(file.content);
     var html = '';
     if (parsed.fm && Object.keys(parsed.fm).length) {
-      html += '<div class="fm-box"><div class="fm-lbl">📋 Frontmatter / Metadata</div>';
+      html += '<div class="fm-box"><div class="fm-lbl">' + esc(VIEW_LANG.fmLabel) + '</div>';
       for (var k in parsed.fm) {
         html += '<div class="fm-row"><span class="fm-k">' + esc(k) + '</span><span class="fm-v">' + esc(String(parsed.fm[k])) + '</span></div>';
       }
@@ -577,7 +590,7 @@ function processMermaid(container) {
     var code = el.textContent.trim();
     var wrap = document.createElement('div');
     wrap.className = 'mermaid-block-wrap';
-    wrap.title = 'Markera text i diagrammet · knappen uppe till höger öppnar helskärm';
+    wrap.title = VIEW_LANG.mermaidWrapTitle;
     wrap.style.cssText = 'background:var(--bg-nav);border:1px solid var(--border-l);border-radius:var(--r-lg);padding:16px;overflow-x:auto;margin:9px 0;text-align:center';
     var div = document.createElement('div');
     div.className = 'mermaid';
@@ -586,8 +599,8 @@ function processMermaid(container) {
     var fsBtn = document.createElement('button');
     fsBtn.type = 'button';
     fsBtn.className = 'mermaid-fs-open-btn';
-    fsBtn.setAttribute('aria-label', 'Öppna diagram i helskärm');
-    fsBtn.title = 'Helskärm (pan/zoom, markera text)';
+    fsBtn.setAttribute('aria-label', VIEW_LANG.mermaidFsAria);
+    fsBtn.title = VIEW_LANG.mermaidFsTitle;
     fsBtn.textContent = '⛶';
     fsBtn.onclick = function(ev) {
       ev.preventDefault();
@@ -611,7 +624,7 @@ function processMermaid(container) {
   if (p && typeof p.then === 'function') {
     p.catch(function(e) {
       container.querySelectorAll('.mermaid:not([data-processed="true"])').forEach(function(m) {
-        m.innerHTML = '<span style="color:var(--red);font-size:.8rem">⚠ Mermaid-fel: ' + esc(String(e.message || e)) + '</span>';
+        m.innerHTML = '<span style="color:var(--red);font-size:.8rem">⚠ ' + esc(VIEW_LANG.mermaidErr) + esc(String(e.message || e)) + '</span>';
       });
     });
   }
@@ -895,7 +908,7 @@ function copyContent() {
   navigator.clipboard.writeText(text).then(function() {
     var btn = event.target;
     var orig = btn.textContent;
-    btn.textContent = '✓ Kopierat';
+    btn.textContent = '✓ ' + VIEW_LANG.copied;
     setTimeout(function() { btn.textContent = orig; }, 1500);
   });
 }

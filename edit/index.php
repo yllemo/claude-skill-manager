@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $origFile  = basename($_POST['original_file'] ?? '');
 
     if ($skillName === '') {
-        $error = "Ange ett namn för skill-filen.";
+        $error = __('edit.error_name');
     } else {
         $newFname = sanitize_filename($skillName);
         $savePath = CONTENT_DIR . $newFname;
@@ -91,37 +91,11 @@ if (!$isNew && $filePath) {
     }
     $skillNameDefault = pathinfo($filename, PATHINFO_FILENAME);
 } else {
-    $initialFiles['SKILL.md'] = <<< 'SKILLMD'
----
-name:
-title:
-description:
-author:
-version: 1.0.0
-tags:
----
-
-# Ny skill
-
-## Syfte
-
-Beskriv vad denna skill gör och när den används.
-
-## Instruktioner
-
-1. Steg ett
-2. Steg två
-
-## Exempel
-
-```
-# Exempel
-```
-SKILLMD;
+    $initialFiles['SKILL.md'] = skill_default_skill_md_template();
     $skillNameDefault = '';
 }
 
-$pageTitle = $isNew ? 'Ny skill' : 'Redigera: ' . pathinfo($filename, PATHINFO_FILENAME);
+$pageTitle = $isNew ? __('edit.page_new') : __('edit.page_edit', ['name' => pathinfo($filename, PATHINFO_FILENAME)]);
 $defaultEntry = '';
 foreach (array_keys($initialFiles) as $n) {
     if (preg_match('/(?:^|\/)SKILL\.md$/i', $n)) { $defaultEntry = $n; break; }
@@ -135,7 +109,7 @@ $skillArchivePrefix = skill_archive_root_prefix_from_paths(array_keys($initialFi
 $switchToAiUrl = $isNew ? '../ai/' : ('../ai/?file=' . rawurlencode($filename));
 ?>
 <!DOCTYPE html>
-<html lang="sv" data-theme="light">
+<html lang="<?= h(skill_lang_html_lang()) ?>" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -289,25 +263,25 @@ html,body{height:100%;overflow:hidden}
 <body>
 
 <header class="header">
-  <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Visa verktyg">
-    🛠️ Verktyg
+  <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="<?= h(__('common.show_tools')) ?>">
+    🛠️ <?= h(__('common.tools')) ?>
   </button>
   <a href="../" style="display:flex;align-items:center;gap:10px;text-decoration:none">
     <div class="logo-mark">📘</div>
-    <div class="logo-text"><?= h(APP_NAME) ?><span class="logo-sub"><?= $isNew ? 'Ny skill' : 'Redigera' ?></span></div>
+    <div class="logo-text"><?= h(APP_NAME) ?><span class="logo-sub"><?= $isNew ? h(__('edit.logo_sub_new')) : h(__('edit.logo_sub_edit')) ?></span></div>
   </a>
   <div class="hdr-sep"></div>
   <div class="hdr-title"><?= h($pageTitle) ?></div>
   <div class="hdr-actions">
-    <a href="<?= h($switchToAiUrl) ?>" class="btn btn-sm btn-teal btn-switch-mode" title="<?= $isNew ? 'Byt till AI-redigering (ny tom skill)' : 'Öppna samma arkiv i AI-redigering' ?>">🤖 Byt till AI-redigering</a>
+    <a href="<?= h($switchToAiUrl) ?>" class="btn btn-sm btn-teal btn-switch-mode" title="<?= h($isNew ? __('edit.switch_ai_title_new') : __('edit.switch_ai_title')) ?>">🤖 <?= h(__('edit.switch_ai')) ?></a>
     <?php if (!$isNew): ?>
-    <a href="../view/?file=<?= urlencode($filename) ?>" class="btn btn-white btn-sm">👁 Visa</a>
+    <a href="../view/?file=<?= urlencode($filename) ?>" class="btn btn-white btn-sm">👁 <?= h(__('common.view')) ?></a>
     <?php endif; ?>
-    <a href="../" class="btn btn-white btn-sm">← Tillbaka</a>
-    <a href="../logout.php" class="btn btn-white btn-sm" onclick="return confirm('Logga ut?')">🔓 Logga ut</a>
-    <button class="help-btn" onclick="openHelp()" title="Vad är en .skill-fil?">?</button>
-    <button class="theme-btn" onclick="toggleTheme()" title="Växla tema">🌓</button>
-    <button class="hamburger-btn" onclick="toggleMobileNav()" aria-label="Meny">
+    <a href="../" class="btn btn-white btn-sm">← <?= h(__('common.back')) ?></a>
+    <a href="../logout.php" class="btn btn-white btn-sm" onclick="return confirm(<?= json_encode(__('common.confirm_logout'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_UNESCAPED_UNICODE) ?>)">🔓 <?= h(__('common.logout')) ?></a>
+    <button class="help-btn" onclick="openHelp()" title="<?= h(__('edit.help_title')) ?>">?</button>
+    <button class="theme-btn" onclick="toggleTheme()" title="<?= h(__('common.theme_toggle')) ?>">🌓</button>
+    <button class="hamburger-btn" onclick="toggleMobileNav()" aria-label="<?= h(__('common.menu')) ?>">
       <span></span>
       <span></span>
       <span></span>
@@ -320,44 +294,44 @@ html,body{height:100%;overflow:hidden}
 <nav class="mobile-nav">
   <div class="mobile-nav-header">
     <div class="mobile-nav-title"><?= h(APP_NAME) ?></div>
-    <div class="mobile-nav-subtitle">Navigation</div>
+    <div class="mobile-nav-subtitle"><?= h(__('common.nav_subtitle')) ?></div>
   </div>
   <div class="mobile-nav-section">
     <a href="../" class="mobile-nav-item">
       <span class="icon">←</span>
-      <span>Tillbaka</span>
+      <span><?= h(__('edit.nav_back')) ?></span>
     </a>
     <a href="javascript:void(0)" onclick="toggleSidebar(); closeMobileNav();" class="mobile-nav-item">
       <span class="icon">🛠️</span>
-      <span>Visa verktyg</span>
+      <span><?= h(__('edit.nav_tools')) ?></span>
     </a>
     <a href="<?= h($switchToAiUrl) ?>" class="mobile-nav-item">
       <span class="icon">🤖</span>
-      <span>Byt till AI-redigering</span>
+      <span><?= h(__('edit.nav_switch_ai')) ?></span>
     </a>
     <?php if (!$isNew): ?>
     <a href="../view/?file=<?= urlencode($filename) ?>" class="mobile-nav-item">
       <span class="icon">👁</span>
-      <span>Visa skill</span>
+      <span><?= h(__('edit.nav_view')) ?></span>
     </a>
     <?php endif; ?>
     <a href="javascript:void(0)" onclick="saveSkill(); closeMobileNav();" class="mobile-nav-item">
       <span class="icon">💾</span>
-      <span>Spara</span>
+      <span><?= h(__('common.save')) ?></span>
     </a>
   </div>
   <div class="mobile-nav-section" style="border-top: 1px solid var(--border-l); padding-top: 8px;">
-    <a href="../logout.php" class="mobile-nav-item" onclick="return confirm('Logga ut?')">
+    <a href="../logout.php" class="mobile-nav-item" onclick="return confirm(<?= json_encode(__('common.confirm_logout'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_UNESCAPED_UNICODE) ?>)">
       <span class="icon">🔓</span>
-      <span>Logga ut</span>
+      <span><?= h(__('common.logout')) ?></span>
     </a>
     <a href="javascript:void(0)" onclick="openHelp(); closeMobileNav();" class="mobile-nav-item">
       <span class="icon">?</span>
-      <span>Hjälp</span>
+      <span><?= h(__('common.help')) ?></span>
     </a>
     <a href="javascript:void(0)" onclick="toggleTheme(); closeMobileNav();" class="mobile-nav-item">
       <span class="icon">🌓</span>
-      <span>Växla tema</span>
+      <span><?= h(__('common.theme_toggle')) ?></span>
     </a>
   </div>
 </nav>
@@ -370,16 +344,16 @@ html,body{height:100%;overflow:hidden}
   <!-- SIDEBAR -->
   <div class="sidebar mobile-hidden" id="sidebar">
     <div class="sb-hdr">
-      <label>Filnamn (.skill)</label>
+      <label><?= h(__('edit.sidebar_filename')) ?></label>
       <input type="text" id="skill-name-input" class="skill-name-input"
-             value="<?= h($skillNameDefault) ?>" placeholder="min-skill">
+             value="<?= h($skillNameDefault) ?>" placeholder="<?= h(__('edit.placeholder_name')) ?>">
       <div class="sb-btn-row">
-        <button type="button" class="btn btn-xs btn-success" style="flex:1" onclick="saveSkill()">💾 Spara</button>
-        <button type="button" class="btn btn-xs btn-secondary" onclick="openAddFileModal()" title="Lägg till fil – egen sökväg eller standardmappar">+ Fil</button>
+        <button type="button" class="btn btn-xs btn-success" style="flex:1" onclick="saveSkill()">💾 <?= h(__('common.save')) ?></button>
+        <button type="button" class="btn btn-xs btn-secondary" onclick="openAddFileModal()" title="<?= h(__('edit.add_file_title')) ?>"><?= h(__('edit.btn_add_file')) ?></button>
       </div>
     </div>
     <div class="tree-section-hdr">
-      <span>Filer i arkivet</span>
+      <span><?= h(__('edit.tree_header')) ?></span>
     </div>
     <div class="tree-wrap" id="tree-wrap"></div>
   </div>
@@ -397,25 +371,25 @@ html,body{height:100%;overflow:hidden}
     <?php endif; ?>
 
     <div class="etoolbar">
-      <span class="etoolbar-label" id="current-file-label">Väljer fil…</span>
-      <button type="button" class="btn btn-sm btn-secondary" id="btn-rename-file" onclick="if(currentFile)renameMoveFile(currentFile)" title="Byt namn eller flytta (sökväg i arkivet)">📂 Namn</button>
-      <button type="button" class="btn btn-sm btn-secondary" id="btn-delete-file" onclick="if(currentFile)removeFile(currentFile)" title="Ta bort fil från arkivet">🗑 Ta bort</button>
-      <button type="button" class="btn btn-sm btn-secondary" onclick="insertTemplate()">📋 Mall</button>
-      <button type="button" class="btn btn-sm btn-secondary" onclick="formatDoc()">✨ Formatera</button>
-      <button type="button" class="btn btn-sm btn-success" onclick="saveSkill()">💾 Spara</button>
+      <span class="etoolbar-label" id="current-file-label"><?= h(__('edit.current_file_loading')) ?></span>
+      <button type="button" class="btn btn-sm btn-secondary" id="btn-rename-file" onclick="if(currentFile)renameMoveFile(currentFile)" title="<?= h(__('edit.rename_title')) ?>">📂 <?= h(__('edit.rename_btn')) ?></button>
+      <button type="button" class="btn btn-sm btn-secondary" id="btn-delete-file" onclick="if(currentFile)removeFile(currentFile)" title="<?= h(__('edit.delete_title')) ?>">🗑 <?= h(__('edit.delete_btn')) ?></button>
+      <button type="button" class="btn btn-sm btn-secondary" onclick="insertTemplate()">📋 <?= h(__('edit.template')) ?></button>
+      <button type="button" class="btn btn-sm btn-secondary" onclick="formatDoc()">✨ <?= h(__('edit.format')) ?></button>
+      <button type="button" class="btn btn-sm btn-success" onclick="saveSkill()">💾 <?= h(__('common.save')) ?></button>
     </div>
 
     <div class="emain">
       <div class="eleft">
         <div class="pane-hdr">
-          ✏️ Editor
+          ✏️ <?= h(__('edit.editor_pane')) ?>
           <span class="lang-badge" id="lang-badge">markdown</span>
-          <span class="editor-hint" title="Visar alla andra filer i arkivet som Markdown-länk eller sökväg">Ctrl+Space · filreferenser</span>
+          <span class="editor-hint" title="<?= h(__('edit.editor_hint_title')) ?>"><?= h(__('edit.editor_hint')) ?></span>
         </div>
         <div id="monaco-container"></div>
       </div>
       <div class="eright">
-        <div class="pane-hdr">👁 Förhandsgranskning</div>
+        <div class="pane-hdr">👁 <?= h(__('edit.preview_pane')) ?></div>
         <div class="preview-scroll"><div class="md" id="ed-preview"></div></div>
       </div>
     </div>
@@ -423,20 +397,20 @@ html,body{height:100%;overflow:hidden}
   </div>
 </div>
 
-<footer><?= h(APP_NAME) ?> · <?= $isNew ? 'Ny skill' : h($filename) ?></footer>
+<footer><?= h(APP_NAME) ?> · <?= $isNew ? h(__('edit.page_new')) : h($filename) ?></footer>
 
 <!-- HELP MODAL -->
 <div class="modal-overlay hidden" id="help-modal" onclick="if(event.target===this)closeHelp()">
   <div class="modal-box">
     <div class="modal-hdr">
-      <span class="modal-hdr-title">📘 Vad är en .skill-fil?</span>
-      <button class="btn btn-xs btn-secondary" onclick="closeHelp()">✕ Stäng</button>
+      <span class="modal-hdr-title">📘 <?= h(__('edit.help_modal_title')) ?></span>
+      <button class="btn btn-xs btn-secondary" onclick="closeHelp()">✕ <?= h(__('common.close')) ?></button>
     </div>
     <div class="modal-body">
       <div class="md" id="help-content"></div>
     </div>
     <div class="modal-footer">
-      <button type="button" class="btn btn-sm btn-primary" onclick="closeHelp()">Stäng</button>
+      <button type="button" class="btn btn-sm btn-primary" onclick="closeHelp()"><?= h(__('common.close')) ?></button>
     </div>
   </div>
 </div>
@@ -444,24 +418,24 @@ html,body{height:100%;overflow:hidden}
 <div class="modal-overlay hidden structure-modal" id="skill-structure-modal" onclick="if(event.target===this)closeSkillStructureModal()">
   <div class="modal-box">
     <div class="modal-hdr">
-      <span class="modal-hdr-title">+ Fil i arkivet</span>
+      <span class="modal-hdr-title"><?= h(__('edit.add_file_modal_title')) ?></span>
       <button type="button" class="btn btn-xs btn-secondary" onclick="closeSkillStructureModal()">✕</button>
     </div>
     <div class="modal-body">
       <div class="add-file-custom">
-        <div class="add-file-custom-h">Egen sökväg</div>
-        <p class="add-file-custom-d">Skapa en tom fil var du vill i arkivet. Ange t.ex. <code>references/guide.md</code>, <code>docs/README.md</code> eller <code>SKILL.md</code>.</p>
-        <button type="button" class="btn btn-sm btn-secondary" onclick="addFileFromPrompt()">📝 Ange sökväg…</button>
+        <div class="add-file-custom-h"><?= h(__('edit.add_custom_h')) ?></div>
+        <p class="add-file-custom-d"><?= __('edit.add_custom_d') ?></p>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="addFileFromPrompt()">📝 <?= h(__('edit.add_path_btn')) ?></button>
       </div>
       <p class="structure-intro">
-        <strong>Standardmappar:</strong> välj en grupp för att skapa tomma mallfiler (befintliga sökvägar hoppas över). I en <code>.skill</code>-zip finns inga riktiga kataloger — sökvägar som <code>references/guide.md</code> skapar bara logiska mappar i trädet. Tabellen under beskriver <strong>syfte</strong> och hur innehåll typiskt <strong>laddas</strong> i agenten (on-demand jämfört med att köra skript).
+        <?= __('edit.structure_intro') ?>
       </p>
       <pre class="structure-tree" id="skill-structure-tree-diagram"></pre>
       <div class="structure-groups" id="skill-structure-groups"></div>
     </div>
     <div class="modal-footer structure-modal-footer">
-      <button type="button" class="btn btn-sm btn-success" onclick="addAllSkillStructureFiles()">Lägg till alla saknade filer</button>
-      <button type="button" class="btn btn-sm btn-primary" onclick="closeSkillStructureModal()">Stäng</button>
+      <button type="button" class="btn btn-sm btn-success" onclick="addAllSkillStructureFiles()"><?= h(__('edit.add_all_missing')) ?></button>
+      <button type="button" class="btn btn-sm btn-primary" onclick="closeSkillStructureModal()"><?= h(__('common.close')) ?></button>
     </div>
   </div>
 </div>
@@ -472,6 +446,26 @@ html,body{height:100%;overflow:hidden}
 <!-- Monaco via CDN -->
 <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.47.0/min/vs/loader.js"></script>
 <script>
+var EDIT_LANG = {
+  treeRename: <?= json_encode(__('edit.tree_rename'), JSON_UNESCAPED_UNICODE) ?>,
+  treeRenameAria: <?= json_encode(__('edit.tree_rename_aria'), JSON_UNESCAPED_UNICODE) ?>,
+  treeDelete: <?= json_encode(__('edit.tree_delete'), JSON_UNESCAPED_UNICODE) ?>,
+  treeDeleteAria: <?= json_encode(__('edit.tree_delete_aria'), JSON_UNESCAPED_UNICODE) ?>,
+  groupPurpose: <?= json_encode(__('edit.group_purpose'), JSON_UNESCAPED_UNICODE) ?>,
+  groupLoaded: <?= json_encode(__('edit.group_loaded'), JSON_UNESCAPED_UNICODE) ?>,
+  groupAdd: <?= json_encode(__('edit.group_add'), JSON_UNESCAPED_UNICODE) ?>,
+  alertFilename: <?= json_encode(__('edit.alert_filename'), JSON_UNESCAPED_UNICODE) ?>,
+  alertNoFiles: <?= json_encode(__('edit.alert_no_files'), JSON_UNESCAPED_UNICODE) ?>,
+  promptNewFile: <?= json_encode(__('edit.prompt_new_file'), JSON_UNESCAPED_UNICODE) ?>,
+  alertBadName: <?= json_encode(__('edit.alert_bad_name'), JSON_UNESCAPED_UNICODE) ?>,
+  alertAllExist: <?= json_encode(__('edit.alert_all_exist'), JSON_UNESCAPED_UNICODE) ?>,
+  alertMinFile: <?= json_encode(__('edit.alert_min_file'), JSON_UNESCAPED_UNICODE) ?>,
+  confirmRemove: <?= json_encode(__('edit.confirm_remove'), JSON_UNESCAPED_UNICODE) ?>,
+  promptRename: <?= json_encode(__('edit.prompt_rename'), JSON_UNESCAPED_UNICODE) ?>,
+  alertBadPath: <?= json_encode(__('edit.alert_bad_path'), JSON_UNESCAPED_UNICODE) ?>,
+  alertPathExists: <?= json_encode(__('edit.alert_path_exists'), JSON_UNESCAPED_UNICODE) ?>,
+  templateConfirm: <?= json_encode(__('edit.template_confirm'), JSON_UNESCAPED_UNICODE) ?>
+};
 marked.setOptions({ breaks: true, gfm: true });
 mermaid.initialize({ startOnLoad: false, theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default' });
 
@@ -497,6 +491,8 @@ var helpMd       = <?= json_encode($helpContent, JSON_UNESCAPED_UNICODE) ?>;
 var defaultEntry = <?= json_encode($defaultEntry) ?>;
 /** Om SKILL.md ligger i t.ex. min-skill/SKILL.md — nya sökvägar som /references/x läggs under den mappen */
 var skillArchivePrefix = <?= json_encode($skillArchivePrefix, JSON_UNESCAPED_UNICODE) ?>;
+var SKILL_MD_TEMPLATE = <?= json_encode(skill_default_skill_md_template(), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS) ?>;
+var helpEmptyFallback = <?= json_encode(__('ai.help_empty'), JSON_UNESCAPED_UNICODE) ?>;
 
 // edits tracks files not yet opened in Monaco
 var edits = Object.assign({}, initialFiles);
@@ -788,15 +784,15 @@ function renderNode(node, depth, wrap, active, pathCount) {
     var btnRen = document.createElement('button');
     btnRen.type = 'button';
     btnRen.className = 'tree-op-btn';
-    btnRen.title = 'Byt namn / flytta';
-    btnRen.setAttribute('aria-label', 'Byt namn');
+    btnRen.title = EDIT_LANG.treeRename;
+    btnRen.setAttribute('aria-label', EDIT_LANG.treeRenameAria);
     btnRen.textContent = '✏️';
     btnRen.onclick = function(e) { e.stopPropagation(); renameMoveFile(fp); };
     var btnDel = document.createElement('button');
     btnDel.type = 'button';
     btnDel.className = 'tree-op-btn';
-    btnDel.title = 'Ta bort fil';
-    btnDel.setAttribute('aria-label', 'Ta bort');
+    btnDel.title = EDIT_LANG.treeDelete;
+    btnDel.setAttribute('aria-label', EDIT_LANG.treeDeleteAria);
     btnDel.textContent = '🗑';
     btnDel.onclick = function(e) { e.stopPropagation(); removeFile(fp); };
     btnDel.disabled = pathCount <= 1;
@@ -840,12 +836,12 @@ function getAllEdits() {
 function saveSkill() {
   var name = document.getElementById('skill-name-input').value.trim();
   if (!name) {
-    alert('Ange ett filnamn för skill-filen.');
+    alert(EDIT_LANG.alertFilename);
     document.getElementById('skill-name-input').focus();
     return;
   }
   var all = getAllEdits();
-  if (Object.keys(all).length === 0) { alert('Det finns inga filer att spara.'); return; }
+  if (Object.keys(all).length === 0) { alert(EDIT_LANG.alertNoFiles); return; }
   document.getElementById('form-skill-name').value  = name;
   document.getElementById('form-files-json').value  = JSON.stringify(all);
   document.getElementById('skill-form').submit();
@@ -853,11 +849,11 @@ function saveSkill() {
 
 // ── ADD FILE (+ Fil öppnar modal; denna anropas från "Ange sökväg…") ──
 function addFileFromPrompt() {
-  var name = prompt('Nytt filnamn i arkivet\n(t.ex. references/README.md):');
+  var name = prompt(EDIT_LANG.promptNewFile);
   if (!name) return;
   name = normalizeArchivePath(name, currentFile);
   if (!name) {
-    alert('Ogiltigt filnamn.');
+    alert(EDIT_LANG.alertBadName);
     return;
   }
   if (getAllPaths().indexOf(name) !== -1) {
@@ -972,7 +968,7 @@ function addFilesFromPreset(paths, closeModal) {
     added.push(name);
   });
   if (added.length === 0) {
-    alert('Alla dessa filer finns redan i arkivet.');
+    alert(EDIT_LANG.alertAllExist);
     return;
   }
   buildTree(added[added.length - 1]);
@@ -1007,13 +1003,13 @@ function buildSkillStructureGroupsUI() {
     var lineS = document.createElement('p');
     lineS.className = 'structure-group-line';
     var sStrong = document.createElement('strong');
-    sStrong.textContent = 'Syfte: ';
+    sStrong.textContent = EDIT_LANG.groupPurpose;
     lineS.appendChild(sStrong);
     lineS.appendChild(document.createTextNode(g.syfte));
     var lineL = document.createElement('p');
     lineL.className = 'structure-group-line';
     var lStrong = document.createElement('strong');
-    lStrong.textContent = 'Laddas: ';
+    lStrong.textContent = EDIT_LANG.groupLoaded;
     lineL.appendChild(lStrong);
     lineL.appendChild(document.createTextNode(g.laddas));
     d.appendChild(lineS);
@@ -1021,7 +1017,7 @@ function buildSkillStructureGroupsUI() {
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'btn btn-xs btn-secondary';
-    btn.textContent = 'Lägg till ' + g.title.replace(/\/?$/, '');
+    btn.textContent = EDIT_LANG.groupAdd + g.title.replace(/\/?$/, '');
     btn.onclick = function() {
       addSkillStructureGroup(i);
     };
@@ -1045,10 +1041,10 @@ function closeSkillStructureModal() {
 function removeFile(path) {
   var all = getAllPaths();
   if (all.length <= 1) {
-    alert('Arkivet måste innehålla minst en fil.');
+    alert(EDIT_LANG.alertMinFile);
     return;
   }
-  if (!confirm('Ta bort filen «' + path + '» från arkivet?')) return;
+  if (!confirm(EDIT_LANG.confirmRemove.replace('{path}', path))) return;
   var next = all.filter(function(p) { return p !== path; })[0];
   removedFromArchive.add(path);
   delete edits[path];
@@ -1065,13 +1061,13 @@ function removeFile(path) {
 }
 
 function renameMoveFile(oldPath) {
-  var name = prompt('Ny sökväg i arkivet (nytt namn eller mapp, t.ex. docs/guide.md):', oldPath);
+  var name = prompt(EDIT_LANG.promptRename, oldPath);
   if (name == null) return;
   name = normalizeArchivePath(name, oldPath);
-  if (!name) { alert('Ogiltig sökväg.'); return; }
+  if (!name) { alert(EDIT_LANG.alertBadPath); return; }
   if (name === oldPath) return;
   if (getAllPaths().indexOf(name) !== -1) {
-    alert('Det finns redan en fil med den sökvägen.');
+    alert(EDIT_LANG.alertPathExists);
     return;
   }
   var content = '';
@@ -1103,39 +1099,9 @@ function renameMoveFile(oldPath) {
 }
 
 // ── TEMPLATE ───────────────────────────────────────────
-// Samma YAML + brödtext som vid ny skill (SKILL.md); övriga filer får en enkel markdown-mall.
-var SKILL_MD_TEMPLATE = [
-  '---',
-  'name:',
-  'title:',
-  'description:',
-  'author:',
-  'version: 1.0.0',
-  'tags:',
-  '---',
-  '',
-  '# Ny skill',
-  '',
-  '## Syfte',
-  '',
-  'Beskriv vad denna skill gör och när den används.',
-  '',
-  '## Instruktioner',
-  '',
-  '1. Steg ett',
-  '2. Steg två',
-  '',
-  '## Exempel',
-  '',
-  '```',
-  '# Exempel',
-  '```',
-  '',
-].join('\n');
-
 function insertTemplate() {
   if (!monacoEditor) return;
-  if (monacoEditor.getValue().trim() && !confirm('Ersätt innehållet med mallen?')) return;
+  if (monacoEditor.getValue().trim() && !confirm(EDIT_LANG.templateConfirm)) return;
   var fname = (currentFile || '').split('/').pop() || '';
   var isSkillMd = /^SKILL\.md$/i.test(fname);
   if (isSkillMd) {
@@ -1161,7 +1127,7 @@ function formatDoc() {
 function openHelp() {
   var el = document.getElementById('help-content');
   if (!el._rendered) {
-    el.innerHTML = marked.parse(helpMd || '_Ingen hjälptext hittades._');
+    el.innerHTML = marked.parse(helpMd || helpEmptyFallback);
     el._rendered = true;
   }
   document.getElementById('help-modal').classList.remove('hidden');

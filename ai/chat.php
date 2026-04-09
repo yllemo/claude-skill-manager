@@ -11,37 +11,37 @@ header('Content-Type: application/json; charset=utf-8');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
-    echo json_encode(['ok' => false, 'error' => 'Endast POST tillåts'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['ok' => false, 'error' => __('chat.err_post_only')], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
 $raw = file_get_contents('php://input');
 if ($raw === false || $raw === '') {
-    echo json_encode(['ok' => false, 'error' => 'Tom begäran'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['ok' => false, 'error' => __('chat.err_empty')], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
 try {
     $body = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
 } catch (Throwable) {
-    echo json_encode(['ok' => false, 'error' => 'Ogiltig JSON'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['ok' => false, 'error' => __('chat.err_bad_json')], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
 if (!is_array($body)) {
-    echo json_encode(['ok' => false, 'error' => 'Ogiltig JSON'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['ok' => false, 'error' => __('chat.err_bad_json')], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
 $provider = $body['provider'] ?? '';
 if (!in_array($provider, ['openai', 'ollama', 'lmstudio'], true)) {
-    echo json_encode(['ok' => false, 'error' => 'Ogiltig leverantör'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['ok' => false, 'error' => __('chat.err_provider')], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
 $messages = $body['messages'] ?? null;
 if (!is_array($messages) || $messages === []) {
-    echo json_encode(['ok' => false, 'error' => 'messages krävs'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['ok' => false, 'error' => __('chat.err_messages')], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -59,14 +59,14 @@ foreach ($messages as $m) {
         continue;
     }
     if (strlen($content) > 400000) {
-        echo json_encode(['ok' => false, 'error' => 'Meddelandet är för långt.'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'error' => __('chat.err_msg_too_long')], JSON_UNESCAPED_UNICODE);
         exit;
     }
     $norm[] = ['role' => $role, 'content' => $content];
 }
 
 if ($norm === []) {
-    echo json_encode(['ok' => false, 'error' => 'Inga giltiga meddelanden'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['ok' => false, 'error' => __('chat.err_no_valid_messages')], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -76,7 +76,7 @@ $env = skill_ai_load_key_env();
 $baseKey = $provider . '_base';
 $base    = rtrim((string)($cfg[$baseKey] ?? ''), '/');
 if ($base === '') {
-    echo json_encode(['ok' => false, 'error' => 'Bas-URL saknas i config/ai.php'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['ok' => false, 'error' => __('chat.err_no_base')], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -86,7 +86,7 @@ if ($model === '') {
     $model  = is_array($models) ? trim((string)($models[$provider] ?? '')) : '';
 }
 if ($model === '') {
-    echo json_encode(['ok' => false, 'error' => 'Ange modellnamn i fältet eller i config/ai.php'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['ok' => false, 'error' => __('chat.err_no_model')], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -98,7 +98,7 @@ if ($provider === 'openai') {
         $apiKey = is_string($g) ? $g : '';
     }
     if ($apiKey === '') {
-        echo json_encode(['ok' => false, 'error' => 'OPENAI_API_KEY saknas i config/key.env'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['ok' => false, 'error' => __('chat.err_no_openai_key')], JSON_UNESCAPED_UNICODE);
         exit;
     }
 }
@@ -114,7 +114,7 @@ try {
 }
 
 if (!$result['ok']) {
-    echo json_encode(['ok' => false, 'error' => $result['error'] ?? 'Okänt fel'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['ok' => false, 'error' => $result['error'] ?? __('chat.err_unknown')], JSON_UNESCAPED_UNICODE);
     exit;
 }
 

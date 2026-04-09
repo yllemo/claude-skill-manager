@@ -33,10 +33,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $msg     = $vErr;
                         $msgType = 'error';
                     } else {
-                        $msg = "Filen <strong>" . h($fname) . "</strong> laddades upp.";
+                        $msg = __('index.msg_upload_ok', ['file' => h($fname)]);
                     }
                 } else {
-                    $msg = "Kunde inte spara filen. Kontrollera rättigheter på /content/.";
+                    $msg = __('index.msg_upload_invalid');
                     $msgType = 'error';
                 }
             } elseif ($ext === 'zip') {
@@ -47,14 +47,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $msg     = $zErr;
                     $msgType = 'error';
                 } else {
-                    $msg = "Zip-filen sparades som <strong>" . h($fname) . "</strong> (endast .md och .txt ingår).";
+                    $msg = __('index.msg_zip_ok', ['file' => h($fname)]);
                 }
             } else {
-                $msg     = "Endast .skill- eller .zip-filer tillåts.";
+                $msg     = __('index.msg_wrong_ext');
                 $msgType = 'error';
             }
         } else {
-            $msg = "Uppladdningsfel (kod " . (int)$f['error'] . ").";
+            $msg = __('index.msg_upload_err', ['code' => (string)(int)$f['error']]);
             $msgType = 'error';
         }
     }
@@ -62,9 +62,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete') {
         $path = validate_file_param((string)($_POST['file'] ?? ''));
         if ($path && unlink($path)) {
-            $msg = "Filen raderades.";
+            $msg = __('index.msg_deleted');
         } else {
-            $msg = "Kunde inte radera filen.";
+            $msg = __('index.msg_delete_fail');
             $msgType = 'error';
         }
     }
@@ -93,18 +93,18 @@ if (strlen($tagQuery) > 200) {
 
 /** ?sort=… — samma värden som #sort-select (kolumn + riktning) */
 $sortOptions = [
-    'modified-desc' => 'Senast ändrad ↓',
-    'modified-asc'  => 'Senast ändrad ↑',
-    'title-asc'     => 'Titel A–Ö',
-    'title-desc'    => 'Titel Ö–A',
-    'tags-asc'      => 'Taggar A–Ö',
-    'tags-desc'     => 'Taggar Ö–A',
-    'author-asc'    => 'Författare A–Ö',
-    'author-desc'   => 'Författare Ö–A',
-    'files-asc'     => 'Filer ↑',
-    'files-desc'    => 'Filer ↓',
-    'size-asc'      => 'Storlek ↑',
-    'size-desc'     => 'Storlek ↓',
+    'modified-desc' => __('index.sort_modified_desc'),
+    'modified-asc'  => __('index.sort_modified_asc'),
+    'title-asc'     => __('index.sort_title_asc'),
+    'title-desc'    => __('index.sort_title_desc'),
+    'tags-asc'      => __('index.sort_tags_asc'),
+    'tags-desc'     => __('index.sort_tags_desc'),
+    'author-asc'    => __('index.sort_author_asc'),
+    'author-desc'   => __('index.sort_author_desc'),
+    'files-asc'     => __('index.sort_files_asc'),
+    'files-desc'    => __('index.sort_files_desc'),
+    'size-asc'      => __('index.sort_size_asc'),
+    'size-desc'     => __('index.sort_size_desc'),
 ];
 $sortQuery = isset($_GET['sort']) ? trim((string)$_GET['sort']) : '';
 $sortQuery = strtolower(preg_replace('/[^a-z0-9\-]/', '', $sortQuery));
@@ -127,7 +127,7 @@ $skillsJson = array_map(fn($s) => [
 ], $skills);
 ?>
 <!DOCTYPE html>
-<html lang="sv" data-theme="light">
+<html lang="<?= h(skill_lang_html_lang()) ?>" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -233,20 +233,20 @@ a.tag { color: var(--text-2); }
 <header class="header">
   <a href="./" style="display:flex;align-items:center;gap:10px;text-decoration:none">
     <div class="logo-mark">📘</div>
-    <div class="logo-text"><?= h(APP_NAME) ?><span class="logo-sub">.skill filer</span></div>
+    <div class="logo-text"><?= h(APP_NAME) ?><span class="logo-sub"><?= h(__('common.logo_sub')) ?></span></div>
   </a>
   <div class="hdr-sep"></div>
-  <div class="hdr-title"><?= $isAuthed ? 'Hantera skills' : 'Översikt' ?></div>
+  <div class="hdr-title"><?= $isAuthed ? h(__('index.hdr_manage')) : h(__('index.hdr_overview')) ?></div>
   <div class="hdr-actions">
     <?php if ($isAuthed): ?>
-    <a href="edit/" class="btn btn-white btn-sm">✏️ Ny skill</a>
-    <a href="download_content.php" class="btn btn-white btn-sm" title="Ladda ner alla filer i content/ som zip">⬇ Allt innehåll</a>
-    <a href="logout.php" class="btn btn-white btn-sm" onclick="return confirm('Logga ut?')">🔓 Logga ut</a>
+    <a href="edit/" class="btn btn-white btn-sm">✏️ <?= h(__('index.btn_new_skill')) ?></a>
+    <a href="download_content.php" class="btn btn-white btn-sm" title="<?= h(__('index.btn_all_content_title')) ?>">⬇ <?= h(__('index.btn_all_content')) ?></a>
+    <a href="logout.php" class="btn btn-white btn-sm" onclick="return confirm(<?= json_encode(__('common.confirm_logout'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_UNESCAPED_UNICODE) ?>)">🔓 <?= h(__('common.logout')) ?></a>
     <?php else: ?>
-    <a href="login.php" class="btn btn-white btn-sm">🔐 Logga in</a>
+    <a href="login.php" class="btn btn-white btn-sm">🔐 <?= h(__('common.login')) ?></a>
     <?php endif; ?>
-    <button class="theme-btn" onclick="toggleTheme()" title="Växla tema">🌓</button>
-    <button class="hamburger-btn" onclick="toggleMobileNav()" aria-label="Meny">
+    <button class="theme-btn" onclick="toggleTheme()" title="<?= h(__('common.theme_toggle')) ?>">🌓</button>
+    <button class="hamburger-btn" onclick="toggleMobileNav()" aria-label="<?= h(__('common.menu')) ?>">
       <span></span>
       <span></span>
       <span></span>
@@ -259,35 +259,35 @@ a.tag { color: var(--text-2); }
 <nav class="mobile-nav">
   <div class="mobile-nav-header">
     <div class="mobile-nav-title"><?= h(APP_NAME) ?></div>
-    <div class="mobile-nav-subtitle">Navigation</div>
+    <div class="mobile-nav-subtitle"><?= h(__('common.nav_subtitle')) ?></div>
   </div>
   <div class="mobile-nav-section">
     <a href="./" class="mobile-nav-item">
       <span class="icon">🏠</span>
-      <span>Hem</span>
+      <span><?= h(__('common.home')) ?></span>
     </a>
     <?php if ($isAuthed): ?>
     <a href="edit/" class="mobile-nav-item">
       <span class="icon">✏️</span>
-      <span>Ny skill</span>
+      <span><?= h(__('index.btn_new_skill')) ?></span>
     </a>
     <a href="download_content.php" class="mobile-nav-item">
       <span class="icon">⬇</span>
-      <span>Allt innehåll (zip)</span>
+      <span><?= h(__('index.btn_all_content')) ?> (zip)</span>
     </a>
-    <a href="logout.php" class="mobile-nav-item" onclick="return confirm('Logga ut?')">
+    <a href="logout.php" class="mobile-nav-item" onclick="return confirm(<?= json_encode(__('common.confirm_logout'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_UNESCAPED_UNICODE) ?>)">
       <span class="icon">🔓</span>
-      <span>Logga ut</span>
+      <span><?= h(__('common.logout')) ?></span>
     </a>
     <?php else: ?>
     <a href="login.php" class="mobile-nav-item">
       <span class="icon">🔐</span>
-      <span>Logga in</span>
+      <span><?= h(__('common.login')) ?></span>
     </a>
     <?php endif; ?>
     <a href="javascript:void(0)" onclick="toggleTheme(); closeMobileNav();" class="mobile-nav-item">
       <span class="icon">🌓</span>
-      <span>Växla tema</span>
+      <span><?= h(__('common.theme_toggle')) ?></span>
     </a>
   </div>
 </nav>
@@ -303,12 +303,12 @@ a.tag { color: var(--text-2); }
     <div class="search-wrap">
       <span class="search-ico">🔍</span>
       <input type="text" class="search-input" id="search-input"
-             placeholder="Sök på titel, beskrivning, taggar, författare…"
+             placeholder="<?= h(__('index.search_placeholder')) ?>"
              oninput="applyFilters()">
     </div>
 
     <select class="filter-select" id="tag-filter" onchange="applyFilters()">
-      <option value="">Alla taggar</option>
+      <option value=""><?= h(__('index.filter_all_tags')) ?></option>
       <?php foreach ($allTags as $tag): ?>
       <option value="<?= h($tag) ?>"><?= h($tag) ?></option>
       <?php endforeach; ?>
@@ -340,7 +340,7 @@ a.tag { color: var(--text-2); }
       <input type="hidden" name="action" value="upload">
       <input type="file" name="skill_file" id="file-input" accept=".skill,.zip,application/zip"
              onchange="document.getElementById('upload-form').submit()">
-      <label for="file-input" class="upload-label" title="Endast .md och .txt i arkiven">⬆ Ladda upp .skill / .zip</label>
+      <label for="file-input" class="upload-label" title="<?= h(__('index.upload_title')) ?>">⬆ <?= h(__('index.upload_label')) ?></label>
     </form>
     <?php endif; ?>
   </div>
@@ -351,20 +351,20 @@ a.tag { color: var(--text-2); }
   <?php if (empty($skills)): ?>
   <div class="empty-state">
     <div class="ei">🗂️</div>
-    <p>Inga .skill-filer hittades.<?php if ($isAuthed): ?><br>Ladda upp en befintlig eller <a href="edit/">skapa en ny</a>.<?php endif; ?></p>
+    <p><?= __('index.empty') ?><?php if ($isAuthed): ?><br><?= __('index.empty_upload') ?><?php endif; ?></p>
   </div>
   <?php else: ?>
 
   <table class="skill-table" id="skill-table">
     <thead>
       <tr>
-        <th class="col-title"   onclick="sortBy('title')">   Titel       <i class="sort-arrow" id="arr-title">↕</i></th>
-        <th class="col-tags"    onclick="sortBy('tags')">    Taggar      <i class="sort-arrow" id="arr-tags">↕</i></th>
-        <th class="col-meta"    onclick="sortBy('author')">  Författare  <i class="sort-arrow" id="arr-author">↕</i></th>
-        <th class="col-meta"    onclick="sortBy('files')">   Filer       <i class="sort-arrow" id="arr-files">↕</i></th>
-        <th class="col-meta"    onclick="sortBy('size')">    Storlek     <i class="sort-arrow" id="arr-size">↕</i></th>
-        <th class="col-meta"    onclick="sortBy('modified')">Ändrad      <i class="sort-arrow" id="arr-modified">↕</i></th>
-        <th class="col-actions">Åtgärder</th>
+        <th class="col-title"   onclick="sortBy('title')">   <?= h(__('index.col_title')) ?>       <i class="sort-arrow" id="arr-title">↕</i></th>
+        <th class="col-tags"    onclick="sortBy('tags')">    <?= h(__('index.col_tags')) ?>      <i class="sort-arrow" id="arr-tags">↕</i></th>
+        <th class="col-meta"    onclick="sortBy('author')">  <?= h(__('index.col_author')) ?>  <i class="sort-arrow" id="arr-author">↕</i></th>
+        <th class="col-meta"    onclick="sortBy('files')">   <?= h(__('index.col_files')) ?>       <i class="sort-arrow" id="arr-files">↕</i></th>
+        <th class="col-meta"    onclick="sortBy('size')">    <?= h(__('index.col_size')) ?>     <i class="sort-arrow" id="arr-size">↕</i></th>
+        <th class="col-meta"    onclick="sortBy('modified')"><?= h(__('index.col_modified')) ?>      <i class="sort-arrow" id="arr-modified">↕</i></th>
+        <th class="col-actions"><?= h(__('index.col_actions')) ?></th>
       </tr>
     </thead>
     <tbody id="skill-tbody">
@@ -407,18 +407,18 @@ a.tag { color: var(--text-2); }
       <td class="col-meta"><?= h($date) ?></td>
       <td class="col-actions">
         <div class="actions-wrap">
-          <a href="view/?file=<?= urlencode($fname) ?>"     class="btn btn-xs btn-primary">👁 Visa</a>
+          <a href="view/?file=<?= urlencode($fname) ?>"     class="btn btn-xs btn-primary">👁 <?= h(__('index.btn_view')) ?></a>
           <details class="split-dl">
-            <summary class="btn btn-xs btn-secondary split-dl-btn" aria-label="Ladda ner">⬇ ▾</summary>
+            <summary class="btn btn-xs btn-secondary split-dl-btn" aria-label="<?= h(__('index.dl_aria')) ?>">⬇ ▾</summary>
             <div class="split-dl-menu" role="menu">
-              <a class="split-dl-opt" href="download.php?file=<?= urlencode($fname) ?>&amp;ext=skill" role="menuitem">Som .skill</a>
-              <a class="split-dl-opt" href="download.php?file=<?= urlencode($fname) ?>&amp;ext=zip" role="menuitem">Som .zip</a>
+              <a class="split-dl-opt" href="download.php?file=<?= urlencode($fname) ?>&amp;ext=skill" role="menuitem"><?= h(__('index.dl_as_skill')) ?></a>
+              <a class="split-dl-opt" href="download.php?file=<?= urlencode($fname) ?>&amp;ext=zip" role="menuitem"><?= h(__('index.dl_as_zip')) ?></a>
             </div>
           </details>
           <?php if ($isAuthed): ?>
           <a href="edit/?file=<?= urlencode($fname) ?>"     class="btn btn-xs btn-teal">✏️</a>
           <form method="POST" style="display:inline"
-                onsubmit="return confirm('Radera <?= h(addslashes($title)) ?>?')">
+                onsubmit="return confirm(<?= json_encode(__('index.confirm_delete', ['name' => $title]), JSON_HEX_TAG | JSON_HEX_APOS | JSON_UNESCAPED_UNICODE) ?>)">
             <input type="hidden" name="action" value="delete">
             <input type="hidden" name="file"   value="<?= h($fname) ?>">
             <button type="submit" class="btn btn-xs btn-danger">🗑</button>
@@ -432,16 +432,21 @@ a.tag { color: var(--text-2); }
   </table>
 
   <div class="no-results hidden" id="no-results">
-    Inga skills matchar din sökning.
+    <?= h(__('index.no_results')) ?>
   </div>
 
   <?php endif; ?>
 
 </div>
 
-<footer><?= h(APP_NAME) ?> · .skill format · <?= date('Y') ?></footer>
+<footer><?= h(APP_NAME) ?> · <?= h(__('common.footer_format')) ?> · <?= date('Y') ?></footer>
 
 <script>
+var LANG = {
+  resultAll: <?= json_encode(__('index.js_result_all'), JSON_UNESCAPED_UNICODE) ?>,
+  resultOne: <?= json_encode(__('index.js_result_one'), JSON_UNESCAPED_UNICODE) ?>,
+  resultPartial: <?= json_encode(__('index.js_result_partial'), JSON_UNESCAPED_UNICODE) ?>
+};
 var sortCol = 'modified', sortDir = 'desc';
 /** Från ?tag=… vid sidladdning (tom sträng om inget) */
 var tagQueryFromServer = <?= json_encode($tagQuery, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS) ?>;
@@ -538,8 +543,8 @@ function applyFilters() {
   var total = rows.length;
   document.getElementById('result-bar').textContent =
     visible === total
-      ? total + ' skill' + (total !== 1 ? 's' : '')
-      : visible + ' av ' + total + ' skills visas';
+      ? (total === 1 ? LANG.resultOne : LANG.resultAll.replace('{n}', String(total)))
+      : LANG.resultPartial.replace('{visible}', String(visible)).replace('{total}', String(total));
 
   // No results
   document.getElementById('no-results').classList.toggle('hidden', visible > 0);

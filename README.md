@@ -10,6 +10,7 @@ A professional PHP-based web application for creating, editing, and managing `.s
 
 ## 🚀 Latest Updates
 
+- 🌐 **UI language (i18n)** — Swedish and English interface via `config/lang.php` (default: Swedish); optional overrides and support for additional language codes
 - 🔍 **Enhanced Mermaid Diagrams** — Interactive fullscreen viewing with pan/zoom, text selection, and diagram source code access
 - 📄 **Improved YAML Support** — Enhanced frontmatter parsing with multi-line description support using YAML block scalars
 - 🖨️ **Print-Friendly Styles** — Optimized printing layouts with clean, professional output
@@ -36,6 +37,7 @@ A professional PHP-based web application for creating, editing, and managing `.s
 - 🌐 **Public Viewing** — Share skills publicly while keeping editing secure
 - ⚡ **Performance Optimized** — Fast loading and efficient file handling
 - 🧩 **MCP Integration** — JSON-RPC endpoint for AI client integration
+- 🌐 **Localization** — Built-in Swedish (`sv`) and English (`en`); switch UI language in `config/lang.php`
 
 ## 💡 Why Use Claude Skill Manager?
 
@@ -56,11 +58,13 @@ skill/
 ├── download_content.php # Bulk content download (requires authentication)
 ├── favicon.ico         # Custom favicon for the application
 ├── _common.php         # Shared functions, CSS and helpers
+├── _lang.php           # UI translations (built-in sv/en) and __( ) helper
 ├── _auth.php           # Session authentication
 ├── AI.md               # AI functionality documentation
 ├── MCP.md              # AI-focused MCP documentation
 ├── config/
 │   ├── config.php      # Password and settings
+│   ├── lang.php        # UI locale (sv/en/…) and optional string overrides
 │   ├── ai.php          # AI configuration (providers, models, system prompts)
 │   ├── key.env.example # Template for API keys and environment variables
 │   └── .htaccess       # Blocks direct HTTP access to /config/
@@ -248,6 +252,21 @@ Edit `config/config.php` to customize:
 - `password`: Login password (supports bcrypt hashing)
 - `session_lifetime`: How long login sessions last (default: 1 month)
 
+Edit `config/lang.php` to customize the **UI language** (labels, buttons, errors, etc.):
+- **`locale`**: Active interface language. Built-in values: `sv` (Swedish, default), `en` (English). If `config/lang.php` is missing, the app behaves as **`sv`** using strings from `_lang.php`.
+- **`strings`**: Optional per-language overrides. Keys match the identifiers in `_lang.php` (for example `index.hdr_overview`, `common.login`). Example:
+  ```php
+  return [
+      'locale' => 'en',
+      'strings' => [
+          'en' => [
+              'index.hdr_overview' => 'Overview',
+          ],
+      ],
+  ];
+  ```
+- **More languages**: Add another code under `strings` (for example `'de' => [...]`) and set `'locale' => 'de'`. Any key you omit falls back to the Swedish built-ins.
+
 Edit `config/ai.php` to configure AI features:
 - `default_provider`: Choose between `openai`, `ollama`, or `lmstudio`
 - `models`: Default model names for each provider
@@ -322,7 +341,7 @@ php -S localhost:8000
 - 🎨 UI/UX improvements  
 - 📚 Documentation updates
 - 🧪 Test coverage
-- 🌐 Internationalization
+- 🌐 Additional locales and translation polish (strings live in `_lang.php` + `config/lang.php`)
 - ♿ Accessibility improvements
 
 Please read our [Contributing Guide](CONTRIBUTING.md) for detailed guidelines.
@@ -338,7 +357,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Mermaid](https://mermaid.js.org/) for diagram support
 - The Claude AI team for making skills an amazing feature
 
-## � Project Status
+## 📊 Project Status
 
 This is an **active project** currently in production use. We're continuously improving the codebase and adding new features based on user feedback.
 
