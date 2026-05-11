@@ -683,10 +683,60 @@ require(['vs/editor/editor.main'], function() {
 
   registerSkillArchiveCompletionProvider(monaco);
 
+  setupScrollSync();
+
   // Open default file, then layout again after model is set
   selectFile(defaultEntry);
   requestAnimationFrame(layoutEditor);
 });
+
+// ── SYNKRONISERAD SCROLLNING (editor ↔ preview) ────────
+var _syncingScroll = false;
+function setupScrollSync() {
+  var previewScroll = document.querySelector('.preview-scroll');
+  if (!monacoEditor || !previewScroll) return;
+
+  monacoEditor.onDidScrollChange(function() {
+    if (_syncingScroll) return;
+    var scrollTop    = monacoEditor.getScrollTop();
+    var scrollHeight = monacoEditor.getScrollHeight();
+    var layoutInfo   = monacoEditor.getLayoutInfo();
+    var visible      = layoutInfo.height;
+    var maxScroll    = Math.max(1, scrollHeight - visible);
+    var ratio        = Math.min(1, Math.max(0, scrollTop / maxScroll));
+
+    var pMax = Math.max(1, previewScroll.scrollHeight - previewScroll.clientHeight);
+    _syncingScroll = true;
+    previewScroll.scrollTop = ratio * pMax;
+    requestAnimationFrame(function() { _syncingScroll = false; });
+  });
+
+  previewScroll.addEventListener('scroll', function() {
+    if (_syncingScroll) return;
+    var pMax  = Math.max(1, previewScroll.scrollHeight - previewScroll.clientHeight);
+    var ratio = Math.min(1, Math.max(0, previewScroll.scrollTop / pMax));
+
+    var scrollHeight = monacoEditor.getScrollHeight();
+    var visible      = monacoEditor.getLayoutInfo().height;
+    var maxScroll    = Math.max(1, scrollHeight - visible);
+    _syncingScroll = true;
+    monacoEditor.setScrollTop(ratio * maxScroll);
+    requestAnimationFrame(function() { _syncingScroll = false; });
+  }, { passive: true });
+}
+
+function resetScrollPositions() {
+  _syncingScroll = true;
+  if (monacoEditor) {
+    monacoEditor.setScrollTop(0);
+    monacoEditor.setScrollLeft(0);
+  }
+  var previewScroll = document.querySelector('.preview-scroll');
+  if (previewScroll) previewScroll.scrollTop = 0;
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() { _syncingScroll = false; });
+  });
+}
 
 /** Unik URI per arkivpost — parse("inmemory://skill/"+path) kan slå ihop modeller för olika filer. */
 function skillEntryToMonacoUri(entryPath) {
@@ -725,6 +775,7 @@ function selectFile(path) {
   buildTree(path);
   updatePreview();
   updateFileActionButtons();
+  resetScrollPositions();
 }
 
 // ── PREVIEW ────────────────────────────────────────────
