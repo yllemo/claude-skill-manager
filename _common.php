@@ -6,8 +6,97 @@ require_once __DIR__ . '/_lang.php';
 define('CONTENT_DIR', __DIR__ . '/content/');
 define('APP_NAME', 'Skill Manager');
 
-const TEXT_EXTS = ['md','txt','json','yml','yaml','js','ts','jsx','tsx','py','sh','bash','css','html','xml','csv','toml','ini','cfg','conf','rst'];
-const IMG_EXTS  = ['png','jpg','jpeg','gif','svg','webp'];
+/* ── FILTYPER (config/files.php) ─────────────────────── */
+
+/** @return array<string, mixed> */
+/** Fallback om config/files.php saknas (håll i synk med den filen). */
+function skill_files_config_defaults(): array {
+    return [
+        'allowed_extensions' => [
+            'md', 'mdx', 'txt', 'rst', 'csv', 'tsv', 'json', 'jsonl', 'ndjson', 'xml', 'yml', 'yaml', 'toml', 'sef',
+            'html', 'htm', 'svg', 'css', 'scss', 'less',
+            'js', 'mjs', 'cjs', 'ts', 'jsx', 'tsx', 'vue', 'svelte',
+            'py', 'rb', 'php', 'go', 'rs', 'java', 'kt', 'cs', 'lua', 'r', 'sql', 'sh', 'bash', 'ps1',
+            'graphql', 'gql', 'hcl', 'tf',
+            'ini', 'cfg', 'conf', 'env', 'properties',
+            'png', 'jpg', 'jpeg', 'gif', 'webp',
+        ],
+        'text_extensions' => [
+            'md', 'mdx', 'txt', 'rst', 'csv', 'tsv', 'json', 'jsonl', 'ndjson', 'xml', 'yml', 'yaml', 'toml', 'sef',
+            'html', 'htm', 'svg', 'css', 'scss', 'less',
+            'js', 'mjs', 'cjs', 'ts', 'jsx', 'tsx', 'vue', 'svelte',
+            'py', 'rb', 'php', 'go', 'rs', 'java', 'kt', 'cs', 'lua', 'r', 'sql', 'sh', 'bash', 'ps1',
+            'graphql', 'gql', 'hcl', 'tf',
+            'ini', 'cfg', 'conf', 'env', 'properties',
+        ],
+        'image_extensions' => ['png', 'jpg', 'jpeg', 'gif', 'webp'],
+        'mime_types' => [
+            'md' => 'text/markdown', 'mdx' => 'text/markdown', 'txt' => 'text/plain', 'rst' => 'text/plain',
+            'csv' => 'text/csv', 'tsv' => 'text/tab-separated-values',
+            'json' => 'application/json', 'jsonl' => 'application/json', 'ndjson' => 'application/x-ndjson',
+            'xml' => 'application/xml', 'yml' => 'text/yaml', 'yaml' => 'text/yaml', 'toml' => 'application/toml',
+            'sef' => 'application/vnd.smart-exam',
+            'html' => 'text/html', 'htm' => 'text/html', 'svg' => 'image/svg+xml',
+            'js' => 'text/javascript', 'css' => 'text/css', 'py' => 'text/x-python', 'sql' => 'application/sql',
+            'php' => 'application/x-php', 'sh' => 'text/x-shellscript', 'bash' => 'text/x-shellscript',
+            'png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'gif' => 'image/gif', 'webp' => 'image/webp',
+        ],
+    ];
+}
+
+/** @return array<string, mixed> */
+function skill_files_config(): array {
+    static $cfg = null;
+    if ($cfg === null) {
+        $defaults = skill_files_config_defaults();
+        $f = __DIR__ . '/config/files.php';
+        $cfg = file_exists($f)
+            ? array_replace_recursive($defaults, (array)(require $f))
+            : $defaults;
+        foreach (['allowed_extensions', 'text_extensions', 'image_extensions'] as $key) {
+            $cfg[$key] = array_values(array_unique(array_map(
+                static fn(string $e): string => strtolower(trim($e)),
+                array_map('strval', (array)($cfg[$key] ?? []))
+            )));
+        }
+        $cfg['mime_types'] = array_map(
+            static fn(string $m): string => strtolower(trim($m)),
+            array_map('strval', (array)($cfg['mime_types'] ?? []))
+        );
+    }
+    return $cfg;
+}
+
+/** @return list<string> */
+function skill_allowed_extensions(): array {
+    return skill_files_config()['allowed_extensions'];
+}
+
+/** @return list<string> */
+function skill_text_extensions(): array {
+    return skill_files_config()['text_extensions'];
+}
+
+/** @return list<string> */
+function skill_image_extensions(): array {
+    return skill_files_config()['image_extensions'];
+}
+
+function skill_extension_mime(string $ext): string {
+    $ext = strtolower(trim($ext));
+    $mimes = skill_files_config()['mime_types'];
+    if (isset($mimes[$ext]) && $mimes[$ext] !== '') {
+        return $mimes[$ext];
+    }
+    return 'application/octet-stream';
+}
+
+/** Etikett för UI/felmeddelanden, t.ex. ".md, .txt, .json" */
+function skill_allowed_exts_label(): string {
+    $exts = skill_allowed_extensions();
+    sort($exts);
+    return implode(', ', array_map(static fn(string $e): string => '.' . $e, $exts));
+}
 
 /* ── HELPERS ────────────────────────────────────────── */
 
@@ -59,7 +148,7 @@ function skill_archive_root_prefix_from_paths(array $entryPaths): string {
 }
 
 /**
- * Uppladdade .skill / .zip får endast innehålla .md- och .txt-filer.
+ * Uppladdade .skill / .zip — endast tillåtna filändelser enligt config/files.php.
  *
  * @return null om OK, annars felmeddelande
  */
@@ -71,7 +160,7 @@ function validate_skill_upload_archive(string $zipPath): ?string {
     if ($zip->open($zipPath) !== true) {
         return __('err.could_not_read_archive');
     }
-    $allowed = ['md', 'txt'];
+    $allowed = skill_allowed_extensions();
     $fileCount = 0;
     for ($i = 0; $i < $zip->numFiles; $i++) {
         $name = (string)$zip->getNameIndex($i);
@@ -82,7 +171,7 @@ function validate_skill_upload_archive(string $zipPath): ?string {
         $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
         if ($ext === '' || !in_array($ext, $allowed, true)) {
             $zip->close();
-            return __('err.forbidden_file', ['name' => $name]);
+            return __('err.forbidden_file', ['name' => $name, 'exts' => skill_allowed_exts_label()]);
         }
     }
     $zip->close();
@@ -93,7 +182,7 @@ function validate_skill_upload_archive(string $zipPath): ?string {
 }
 
 /**
- * Skapar en .skill-fil i $destSkillPath från en uppladdad .zip (endast .md/.txt kopieras).
+ * Skapar en .skill-fil i $destSkillPath från en uppladdad .zip (endast tillåtna filändelser kopieras).
  *
  * @return null om OK, annars felmeddelande (vid fel raderas $destSkillPath om den skapades)
  */
@@ -102,7 +191,7 @@ function create_skill_from_uploaded_zip(string $tmpZipPath, string $destSkillPat
     if ($err !== null) {
         return $err;
     }
-    $allowed = ['md', 'txt'];
+    $allowed = skill_allowed_extensions();
     $zipIn = new ZipArchive();
     if ($zipIn->open($tmpZipPath) !== true) {
         return __('err.could_not_read_zip');
@@ -136,7 +225,7 @@ function create_skill_from_uploaded_zip(string $tmpZipPath, string $destSkillPat
         if (is_file($destSkillPath)) {
             unlink($destSkillPath);
         }
-        return __('err.no_md_txt');
+        return __('err.no_allowed_files', ['exts' => skill_allowed_exts_label()]);
     }
     return null;
 }
@@ -326,6 +415,101 @@ function get_skills(): array {
 }
 
 /**
+ * Hämtar rå bytes för en post i ett .skill-arkiv.
+ *
+ * @return array{path:string,ext:string,content:string,size:int}|null
+ */
+function skill_get_zip_entry_raw(string $zipPath, string $entryPath): ?array {
+    $entryPath = sanitize_entry($entryPath);
+    if ($entryPath === '' || !is_file($zipPath)) {
+        return null;
+    }
+    $zip = new ZipArchive();
+    if ($zip->open($zipPath) !== true) {
+        return null;
+    }
+    $foundIndex = null;
+    $foundName  = null;
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $name = normalize_zip_entry_path((string)$zip->getNameIndex($i));
+        if ($name === '' || str_ends_with($name, '/')) {
+            continue;
+        }
+        if ($name === $entryPath || strcasecmp($name, $entryPath) === 0) {
+            $foundIndex = $i;
+            $foundName  = $name;
+            break;
+        }
+    }
+    if ($foundIndex === null) {
+        $zip->close();
+        return null;
+    }
+    $stat    = $zip->statIndex($foundIndex);
+    $content = (string)$zip->getFromIndex($foundIndex);
+    $zip->close();
+    $ext = strtolower(pathinfo($foundName, PATHINFO_EXTENSION));
+
+    return [
+        'path'    => $foundName,
+        'ext'     => $ext,
+        'content' => $content,
+        'size'    => (int)($stat['size'] ?? strlen($content)),
+    ];
+}
+
+/** Delbar URL till en fil i arkivet (relativ från /view/). */
+function skill_view_entry_url(string $skillBasename, string $entryPath): string {
+    $skillBasename = basename($skillBasename);
+    $entryPath     = sanitize_entry($entryPath);
+    return 'index.php?file=' . rawurlencode($skillBasename) . '&path=' . rawurlencode($entryPath);
+}
+
+/**
+ * Skickar en arkivpost med lämpliga Content-Type/Disposition headers.
+ */
+function skill_serve_skill_archive_entry(string $skillZipPath, string $entryPath): void {
+    $data = skill_get_zip_entry_raw($skillZipPath, $entryPath);
+    if ($data === null) {
+        http_response_code(404);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo __('view.entry_not_found');
+        exit;
+    }
+
+    $ext      = $data['ext'];
+    $mime     = skill_extension_mime($ext);
+    $content  = $data['content'];
+    $basename = basename($data['path']);
+
+    if ($mime === 'application/octet-stream' && $ext !== '') {
+        $mime = 'application/octet-stream';
+    }
+
+    $charsetSuffix = '';
+    if (
+        str_starts_with($mime, 'text/')
+        || in_array($mime, ['application/json', 'application/xml', 'application/javascript', 'image/svg+xml'], true)
+    ) {
+        $charsetSuffix = '; charset=utf-8';
+    }
+
+    header('Content-Type: ' . $mime . $charsetSuffix);
+    header('Content-Length: ' . (string)strlen($content));
+    header('X-Content-Type-Options: nosniff');
+
+    $disposition = 'inline';
+    if ($mime === 'application/octet-stream') {
+        $disposition = 'attachment';
+    }
+    $safeName = preg_replace('/[^\x20-\x7E]/', '_', $basename) ?: 'file';
+    header('Content-Disposition: ' . $disposition . '; filename="' . str_replace(['"', '\\'], '', $safeName) . '"');
+
+    echo $content;
+    exit;
+}
+
+/**
  * Read all files from a ZIP into an array.
  * Returns ['path' => ['type'=>'text'|'image'|'binary', 'content'=>..., 'size'=>...]]
  */
@@ -345,11 +529,14 @@ function read_zip_files(string $zipPath): array {
         }
         $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
         $size = (int)$stat['size'];
-        if (in_array($ext, TEXT_EXTS)) {
+        if (in_array($ext, skill_text_extensions(), true)) {
             $entries[$name] = ['type' => 'text', 'content' => (string)$zip->getFromIndex($i), 'size' => $size];
-        } elseif (in_array($ext, IMG_EXTS) && $size < 512 * 1024) {
+        } elseif (in_array($ext, skill_image_extensions(), true) && $size < 512 * 1024) {
             $raw  = (string)$zip->getFromIndex($i);
-            $mime = $ext === 'svg' ? 'image/svg+xml' : 'image/' . ($ext === 'jpg' ? 'jpeg' : $ext);
+            $mime = skill_extension_mime($ext);
+            if (!str_starts_with($mime, 'image/')) {
+                $mime = 'image/' . ($ext === 'jpg' ? 'jpeg' : $ext);
+            }
             $entries[$name] = ['type' => 'image', 'content' => "data:{$mime};base64," . base64_encode($raw), 'size' => $size];
         } else {
             $entries[$name] = ['type' => 'binary', 'content' => '', 'size' => $size];

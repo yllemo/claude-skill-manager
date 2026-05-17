@@ -18,4 +18,6 @@ return [
     // ── APP ─────────────────────────────────────────────
     'app_name' => 'Skill Manager',
 
+    // Tillåtna filtyper i .skill-arkiv: se config/files.php (kopiera från files.php.example)
+
 ];

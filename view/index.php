@@ -11,7 +11,19 @@ if (!$filePath) {
     exit;
 }
 
-$filename = basename($filePath);
+$filename  = basename($filePath);
+$entryPath = sanitize_entry((string)($_GET['path'] ?? ''));
+$serveRaw  = array_key_exists('raw', $_GET) && (string)($_GET['raw'] ?? '') !== '0';
+
+// Direktlänk till en fil i arkivet: /view/?file=name.skill&path=docs/test.html
+if ($entryPath !== '') {
+    $entryExt = strtolower(pathinfo($entryPath, PATHINFO_EXTENSION));
+    if ($serveRaw || $entryExt !== 'md') {
+        skill_serve_skill_archive_entry($filePath, $entryPath);
+        exit;
+    }
+}
+
 $entries  = read_zip_files($filePath);
 
 if (empty($entries)) {
@@ -30,6 +42,18 @@ if (!$defaultEntry) {
     }
 }
 if (!$defaultEntry) $defaultEntry = array_key_first($entries);
+
+// ?path=references/guide.md öppnar den filen i viewer (endast .md utan &raw=1)
+if ($entryPath !== '' && isset($entries[$entryPath])) {
+    $defaultEntry = $entryPath;
+} elseif ($entryPath !== '') {
+    foreach (array_keys($entries) as $n) {
+        if (strcasecmp($n, $entryPath) === 0) {
+            $defaultEntry = $n;
+            break;
+        }
+    }
+}
 
 // Count files and total size
 $numFiles  = count($entries);
@@ -470,8 +494,12 @@ var VIEW_LANG = {
   mermaidFsAria: <?= json_encode(__('view.mermaid_fs_open_aria'), JSON_UNESCAPED_UNICODE) ?>,
   mermaidFsTitle: <?= json_encode(__('view.mermaid_fs_open_title'), JSON_UNESCAPED_UNICODE) ?>,
   mermaidErr: <?= json_encode(__('view.mermaid_error'), JSON_UNESCAPED_UNICODE) ?>,
-  copied: <?= json_encode(__('view.copied'), JSON_UNESCAPED_UNICODE) ?>
+  copied: <?= json_encode(__('view.copied'), JSON_UNESCAPED_UNICODE) ?>,
+  openNewTab: <?= json_encode(__('view.open_new_tab'), JSON_UNESCAPED_UNICODE) ?>,
+  openBinaryBlocked: <?= json_encode(__('view.open_binary_blocked'), JSON_UNESCAPED_UNICODE) ?>,
+  entryOpen: <?= json_encode(__('view.entry_open'), JSON_UNESCAPED_UNICODE) ?>
 };
+var SKILL_FILE = <?= json_encode($filename, JSON_UNESCAPED_UNICODE) ?>;
 marked.setOptions({ breaks: true, gfm: true });
 mermaid.initialize({ startOnLoad: false, theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default' });
 
@@ -527,12 +555,32 @@ function renderNode(node, depth, wrap, active) {
 
 function fIcon(name) {
   var ext = name.split('.').pop().toLowerCase();
-  var m = {md:'📄',txt:'📝',json:'📋',yml:'⚙️',yaml:'⚙️',js:'📜',ts:'📜',jsx:'⚛️',tsx:'⚛️',py:'🐍',sh:'🖥️',bash:'🖥️',css:'🎨',html:'🌐',xml:'📰',csv:'📊',png:'🖼️',jpg:'🖼️',jpeg:'🖼️',gif:'🖼️',svg:'🖼️',webp:'🖼️',pdf:'📕'};
+  var m = {md:'📄',mdx:'📄',txt:'📝',rst:'📝',csv:'📊',tsv:'📊',json:'📋',jsonl:'📋',ndjson:'📋',sef:'📋',yml:'⚙️',yaml:'⚙️',toml:'⚙️',xml:'📰',js:'📜',ts:'📜',jsx:'⚛️',tsx:'⚛️',py:'🐍',rb:'💎',php:'🐘',go:'🔷',rs:'🦀',java:'☕',sql:'🗃️',sh:'🖥️',bash:'🖥️',ps1:'🖥️',css:'🎨',html:'🌐',svg:'🖼️',vue:'💚',graphql:'◈',png:'🖼️',jpg:'🖼️',jpeg:'🖼️',gif:'🖼️',webp:'🖼️',pdf:'📕'};
   return m[ext] || '📎';
 }
 
 // ── SELECT & RENDER ───────────────────────────────────
+function fileExt(path) {
+  return (path.split('/').pop() || '').split('.').pop().toLowerCase();
+}
+
+function entryViewUrl(path, raw) {
+  var q = 'index.php?file=' + encodeURIComponent(SKILL_FILE) + '&path=' + encodeURIComponent(path);
+  if (raw) q += '&raw=1';
+  return q;
+}
+
+function openFileInNewTab(path) {
+  if (!FILES[path]) return;
+  window.open(entryViewUrl(path, fileExt(path) === 'md'), '_blank');
+}
+
 function selectFile(path) {
+  if (fileExt(path) !== 'md') {
+    openFileInNewTab(path);
+    buildTree(path);
+    return;
+  }
   curPath = path;
   var parts = path.split('/');
   document.getElementById('breadcrumb').innerHTML = parts.map(function(p, i) {

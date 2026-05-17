@@ -10,6 +10,10 @@ A professional PHP-based web application for creating, editing, and managing `.s
 
 ## 🚀 Latest Updates
 
+- 📁 **Configurable file types** — Allowed extensions and MIME types in `config/files.php` (text, code, images, `.sef`, `.csv`, `.txt`, and more)
+- 🔗 **Direct file URLs** — Open any archive file via `/view/?file=name.skill&path=docs/test.html` (shareable links, no blob URLs)
+- ✏️ **Multi-format editing** — Monaco syntax highlighting for many text types; markdown preview only for `.md`
+- 👁️ **Smarter viewer** — `.md` rendered in the UI; other types open in a new tab with correct `Content-Type`
 - 🌐 **UI language (i18n)** — Swedish and English interface via `config/lang.php` (default: Swedish); optional overrides and support for additional language codes
 - 🔍 **Enhanced Mermaid Diagrams** — Interactive fullscreen viewing with pan/zoom, text selection, and diagram source code access
 - 📄 **Improved YAML Support** — Enhanced frontmatter parsing with multi-line description support using YAML block scalars
@@ -28,7 +32,8 @@ A professional PHP-based web application for creating, editing, and managing `.s
 - 🤖 **AI-Powered Editing** — Chat with AI assistants to create and refine skills using OpenAI, Ollama, or LM Studio
 - 🗂️ **Skill Library Management** — Upload, organize, and manage .skill files with searchable metadata
 - ✏️ **Dual Editor Experience** — Choose between Monaco Editor (VS Code-style) or AI-assisted editing
-- 👁️ **Live Preview** — Real-time Markdown rendering with enhanced Mermaid diagram support and fullscreen viewing
+- 👁️ **Live Preview** — Real-time Markdown rendering for `.md` with enhanced Mermaid diagram support and fullscreen viewing
+- 📂 **Many file types** — HTML, JSON, JS, CSS, Python, SVG, `.sef` (Smart Exam Format), CSV, images, and more (configurable)
 - 🖱️ **Interactive Diagrams** — Pan, zoom, and select text in Mermaid diagrams with dedicated fullscreen mode
 - 🔐 **Secure Authentication** — Password-protected editing with session management
 - 📱 **Responsive Design** — Works seamlessly across desktop and mobile devices with print-friendly styles
@@ -64,6 +69,8 @@ skill/
 ├── MCP.md              # AI-focused MCP documentation
 ├── config/
 │   ├── config.php      # Password and settings
+│   ├── files.php       # Allowed file extensions and MIME types for archives
+│   ├── files.php.example # Template for files.php
 │   ├── lang.php        # UI locale (sv/en/…) and optional string overrides
 │   ├── ai.php          # AI configuration (providers, models, system prompts)
 │   ├── key.env.example # Template for API keys and environment variables
@@ -91,8 +98,8 @@ skill/
 - Filter by tags via dropdown or click on tag in list
 - Columns: title, description, tags, author, file count, size, modified
 - Upload (authenticated): accepts `.skill` and `.zip`
-- Upload validation: archives may only contain `.md` and `.txt`
-- `.zip` upload conversion: automatically creates `.skill` in `/content`
+- Upload validation: archive entries must use extensions listed in `config/files.php` (`allowed_extensions`)
+- `.zip` upload conversion: automatically creates `.skill` in `/content` (only allowed files are copied)
 - Actions by auth state:
   - Guest: View, Download
   - Authenticated: View, Download, Edit, Delete
@@ -101,10 +108,18 @@ skill/
 ### 👁️ Skill Viewer (`/view/?file=name.skill`)
 **Public access — no authentication required.**
 - File tree sidebar showing all files in the ZIP archive
-- Renders Markdown via [marked.js](https://marked.js.org/) with enhanced [Mermaid](https://mermaid.js.org/) diagram support
+- **`.md` files** — Rendered in the main panel via [marked.js](https://marked.js.org/) with enhanced [Mermaid](https://mermaid.js.org/) diagram support
+- **Other files** (HTML, JSON, images, `.sef`, etc.) — Open in a new browser tab via a shareable query-string URL
+- **Direct links** to any file in the archive:
+  ```
+  /view/?file=my-skill.skill&path=docs/test.html
+  /view/?file=my-skill.skill&path=assets/diagram.svg
+  /view/?file=my-skill.skill&path=SKILL.md          # opens in viewer (rendered)
+  /view/?file=my-skill.skill&path=SKILL.md&raw=1    # raw file content
+  ```
 - **Interactive Mermaid diagrams** — Fullscreen viewing with pan/zoom, text selection in SVG elements
 - Sidebar shows frontmatter metadata, tags, and file info with support for multi-line descriptions
-- Toggle between rendered view and raw text
+- Toggle between rendered view and raw text (for `.md` in the main panel)
 - Copy button for file contents
 - Edit button shown only when authenticated (guests see Login button instead)
 - Download button includes format dropdown (`.skill` / `.zip`)
@@ -112,9 +127,9 @@ skill/
 
 ### ✏️ Skill Editor (`/edit/?file=name.skill` or `/edit/` for new)
 **Requires authentication.**
-- [Monaco Editor](https://microsoft.github.io/monaco-editor/) (VS Code's editor) with syntax highlighting per file type
+- [Monaco Editor](https://microsoft.github.io/monaco-editor/) (VS Code's editor) with syntax highlighting per file type (JSON, HTML, CSS, Python, SQL, `.sef`, and more)
 - File tree sidebar — click to switch files, each file has its own undo/redo
-- Live preview with Mermaid diagram support
+- **Live markdown preview** (split pane) for `.md` only — other text types use the editor full-width without preview rendering
 - Add new files to archive via `+ File` button with smart structure templates
 - Rename/move files inside archive
 - Delete files inside archive
@@ -154,8 +169,11 @@ my-skill/
 ├── SKILL.md            # Required — main file with frontmatter + instructions
 ├── scripts/            # Optional — executable code, e.g. Python or shell 
 ├── references/         # Optional — reference documents, style guides, specs
-└── templates/          # Optional — output templates
+├── templates/          # Optional — output templates
+└── docs/               # Optional — HTML, JSON, .sef, CSV, or other allowed types
 ```
+
+**Allowed entry types** are defined in `config/files.php`. By default this includes Markdown, plain text (`.txt`), CSV/TSV, JSON/JSONL, HTML, SVG, common source files (JS, TS, CSS, Python, PHP, SQL, …), **`.sef` (Smart Exam Format)**, config files (`.env`, `.ini`, …), and raster images (PNG, JPEG, GIF, WebP). Adjust the lists to match your workflow.
 
 ### SKILL.md — Frontmatter Structure
 
@@ -208,15 +226,18 @@ location: /optional/path/reference
    chmod 750 config/
    ```
 
-3. **Configure your password and AI settings**
+3. **Configure your password and settings**
    ```bash
-   # Copy the configuration template
+   # Copy the configuration templates
    cp config/config.php.example config/config.php
+   cp config/files.php.example config/files.php   # if files.php is not already present
    ```
    Edit `config/config.php` and update the password:
    ```php
    'password' => 'your-secure-password',
    ```
+
+   Edit `config/files.php` to control which file extensions are allowed in uploads and how they are served (see [Configuration Options](#-configuration-options)).
 
    **Optional: Configure AI providers**
    ```bash
@@ -251,6 +272,23 @@ Upload a sample skill or create a new one to test all features are working corre
 Edit `config/config.php` to customize:
 - `password`: Login password (supports bcrypt hashing)
 - `session_lifetime`: How long login sessions last (default: 1 month)
+
+Edit `config/files.php` to customize **allowed file types** in `.skill` archives:
+
+| Key | Purpose |
+|-----|---------|
+| `allowed_extensions` | Extensions permitted on upload (`.skill` / `.zip`) |
+| `text_extensions` | Treated as UTF-8 text — editable in Monaco and readable via `/view/?path=…` |
+| `image_extensions` | Embedded as images in the viewer (up to 512 KB per file when loading the tree) |
+| `mime_types` | `Content-Type` when serving a file via `&path=` (and for image data URLs) |
+
+Default highlights include `.md`, `.txt`, `.csv`, `.tsv`, `.json`, `.sef`, `.html`, `.svg`, and common code/config extensions. Example — add or adjust Smart Exam Format MIME if SEF files are JSON:
+
+```php
+'sef' => 'application/json',  // or keep application/vnd.smart-exam
+```
+
+Copy `config/files.php.example` as a starting point for a minimal allowlist.
 
 Edit `config/lang.php` to customize the **UI language** (labels, buttons, errors, etc.):
 - **`locale`**: Active interface language. Built-in values: `sv` (Swedish, default), `en` (English). If `config/lang.php` is missing, the app behaves as **`sv`** using strings from `_lang.php`.
@@ -295,8 +333,9 @@ Edit `config/key.env` for sensitive configuration:
 1. **Create a new skill:** Click "New Skill" or visit `/edit/`
 2. **Edit existing skills:** Click "Edit" next to any skill in the dashboard
 3. **View skills:** Skills can be viewed publicly at `/view/?file=skillname.skill`
-4. **Upload skills:** Drag and drop `.skill` files onto the dashboard
-5. **Organize with tags:** Use frontmatter tags for easy filtering and searching
+4. **Link to a file inside a skill:** `/view/?file=skillname.skill&path=references/guide.html`
+5. **Upload skills:** Drag and drop `.skill` or `.zip` files onto the dashboard (entries must match `allowed_extensions`)
+6. **Organize with tags:** Use frontmatter tags for easy filtering and searching
 
 ## 🔧 Troubleshooting
 
@@ -305,6 +344,8 @@ Edit `config/key.env` for sensitive configuration:
 - **"ZipArchive not found"**: Install PHP zip extension (`php-zip` package)
 - **Login not working**: Verify `config/config.php` exists and password is set correctly
 - **Styles not loading**: Check that all files were uploaded and web server can serve static files
+- **Upload rejected for a file type**: Add the extension to `allowed_extensions` in `config/files.php`
+- **"File not found in archive"** on a direct link: Use the path as stored in the ZIP (e.g. `docs/test.html`, not `/docs/test.html`)
 
 **Need Help?** Open an issue on GitHub with your PHP version and error details.
 

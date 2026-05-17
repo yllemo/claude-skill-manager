@@ -11,6 +11,7 @@ if (!is_dir(CONTENT_DIR)) {
 
 $msg     = '';
 $msgType = 'success';
+$allowedExtsLabel = skill_allowed_exts_label();
 
 /* ── POST-hantering (kräver inloggning) ───────────────── */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -47,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $msg     = $zErr;
                     $msgType = 'error';
                 } else {
-                    $msg = __('index.msg_zip_ok', ['file' => h($fname)]);
+                    $msg = __('index.msg_zip_ok', ['file' => h($fname), 'exts' => $allowedExtsLabel]);
                 }
             } else {
                 $msg     = __('index.msg_wrong_ext');
@@ -340,7 +341,7 @@ a.tag { color: var(--text-2); }
       <input type="hidden" name="action" value="upload">
       <input type="file" name="skill_file" id="file-input" accept=".skill,.zip,application/zip"
              onchange="document.getElementById('upload-form').submit()">
-      <label for="file-input" class="upload-label" title="<?= h(__('index.upload_title')) ?>">⬆ <?= h(__('index.upload_label')) ?></label>
+      <label for="file-input" class="upload-label" title="<?= h(__('index.upload_title', ['exts' => $allowedExtsLabel])) ?>">⬆ <?= h(__('index.upload_label')) ?></label>
     </form>
     <?php endif; ?>
   </div>

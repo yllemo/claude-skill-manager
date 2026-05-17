@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $ename = (string)$origZip->getNameIndex($i);
                     if (str_ends_with($ename, '/')) continue;
                     $ext = strtolower(pathinfo($ename, PATHINFO_EXTENSION));
-                    if (!in_array($ext, TEXT_EXTS)) {
+                    if (!in_array($ext, skill_text_extensions(), true)) {
                         $zip->addFromString($ename, (string)$origZip->getFromIndex($i));
                     }
                 }
@@ -169,6 +169,8 @@ html,body{height:100%;overflow:hidden}
 
 /* SPLIT: monaco + preview */
 .emain{flex:1;display:grid;grid-template-columns:1fr 1fr;overflow:hidden;min-height:0}
+.emain.editor-only{grid-template-columns:1fr}
+.emain.editor-only .eright{display:none}
 .eleft,.eright{display:flex;flex-direction:column;overflow:hidden;min-width:0;min-height:0}
 .eleft{border-right:1px solid var(--border-l);position:relative}
 .pane-hdr{padding:6px 12px;background:var(--bg-nav);border-bottom:1px solid var(--border-l);font-size:.7rem;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;display:flex;align-items:center;gap:6px}
@@ -568,10 +570,44 @@ function updateFileActionButtons() {
 // ── LANGUAGE MAP ───────────────────────────────────────
 function getLang(filename) {
   var ext = (filename.split('.').pop() || '').toLowerCase();
-  return {md:'markdown',markdown:'markdown',txt:'plaintext',js:'javascript',ts:'typescript',
-          jsx:'javascript',tsx:'typescript',json:'json',yml:'yaml',yaml:'yaml',
-          py:'python',sh:'shell',bash:'shell',css:'css',html:'html',xml:'xml',
-          toml:'ini',ini:'ini',cfg:'ini',conf:'ini',csv:'plaintext',rst:'plaintext'}[ext] || 'plaintext';
+  return {
+    md:'markdown', mdx:'markdown', markdown:'markdown', txt:'plaintext', rst:'plaintext',
+    csv:'plaintext', tsv:'plaintext', json:'json', jsonl:'json', ndjson:'json', sef:'json',
+    yml:'yaml', yaml:'yaml', toml:'ini', xml:'xml', svg:'xml',
+    html:'html', htm:'html', css:'css', scss:'scss', less:'css',
+    js:'javascript', mjs:'javascript', cjs:'javascript', ts:'typescript', jsx:'javascript', tsx:'typescript',
+    vue:'html', svelte:'html',
+    py:'python', rb:'ruby', php:'php', go:'go', rs:'rust', java:'java', kt:'kotlin', cs:'csharp',
+    lua:'lua', r:'r', sql:'sql', sh:'shell', bash:'shell', ps1:'powershell',
+    graphql:'plaintext', gql:'plaintext', hcl:'plaintext', tf:'plaintext',
+    ini:'ini', cfg:'ini', conf:'ini', env:'ini', properties:'ini'
+  }[ext] || 'plaintext';
+}
+
+function usesMarkdownPreview(path) {
+  return fileExt(path) === 'md';
+}
+
+function fileExt(path) {
+  return (path.split('/').pop() || '').split('.').pop().toLowerCase();
+}
+
+function updatePreviewPaneVisibility() {
+  var emain = document.querySelector('.emain');
+  if (!emain) return;
+  if (currentFile && usesMarkdownPreview(currentFile)) {
+    emain.classList.remove('editor-only');
+  } else {
+    emain.classList.add('editor-only');
+  }
+  if (monacoEditor) {
+    var container = document.getElementById('monaco-container');
+    if (container) {
+      requestAnimationFrame(function() {
+        monacoEditor.layout({ width: container.clientWidth, height: container.clientHeight });
+      });
+    }
+  }
 }
 
 function getMonacoTheme() {
@@ -773,6 +809,7 @@ function selectFile(path) {
   document.getElementById('pane-filename') && (document.getElementById('pane-filename').textContent = path);
 
   buildTree(path);
+  updatePreviewPaneVisibility();
   updatePreview();
   updateFileActionButtons();
   resetScrollPositions();
@@ -781,15 +818,12 @@ function selectFile(path) {
 // ── PREVIEW ────────────────────────────────────────────
 function updatePreview() {
   if (!monacoEditor) return;
+  updatePreviewPaneVisibility();
+  if (!currentFile || !usesMarkdownPreview(currentFile)) return;
   var val  = monacoEditor.getValue();
-  var ext  = currentFile ? currentFile.split('.').pop().toLowerCase() : 'md';
   var prev = document.getElementById('ed-preview');
-  if (ext === 'md' || ext === 'txt') {
-    prev.innerHTML = marked.parse(val || '');
-    processMermaid(prev);
-  } else {
-    prev.innerHTML = '<pre style="white-space:pre-wrap;font-size:.82rem;font-family:Consolas,monospace">' + esc(val) + '</pre>';
-  }
+  prev.innerHTML = marked.parse(val || '');
+  processMermaid(prev);
 }
 
 // ── TREE ───────────────────────────────────────────────
@@ -858,7 +892,7 @@ function renderNode(node, depth, wrap, active, pathCount) {
 function indent(d) { return '<span class="tree-indent" style="width:' + (d*13) + 'px"></span>'; }
 function fIcon(name) {
   var ext = (name.split('.').pop() || '').toLowerCase();
-  return {md:'📄',txt:'📝',json:'📋',yml:'⚙️',yaml:'⚙️',js:'📜',ts:'📜',py:'🐍',sh:'🖥️',css:'🎨',html:'🌐',xml:'📰',csv:'📊'}[ext] || '📎';
+  return {md:'📄',mdx:'📄',txt:'📝',rst:'📝',csv:'📊',tsv:'📊',json:'📋',jsonl:'📋',sef:'📋',yml:'⚙️',yaml:'⚙️',toml:'⚙️',xml:'📰',js:'📜',ts:'📜',py:'🐍',rb:'💎',php:'🐘',sql:'🗃️',sh:'🖥️',css:'🎨',html:'🌐',svg:'🖼️',vue:'💚'}[ext] || '📎';
 }
 
 // ── GET ALL PATHS (models + unopened edits) ────────────

@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         continue;
                     }
                     $ext = strtolower(pathinfo($ename, PATHINFO_EXTENSION));
-                    if (!in_array($ext, TEXT_EXTS)) {
+                    if (!in_array($ext, skill_text_extensions(), true)) {
                         $zip->addFromString($ename, (string)$origZip->getFromIndex($i));
                     }
                 }
@@ -598,10 +598,18 @@ function updateFileActionButtons() {
 
 function getLang(filename) {
   var ext = (filename.split('.').pop() || '').toLowerCase();
-  return {md:'markdown',markdown:'markdown',txt:'plaintext',js:'javascript',ts:'typescript',
-          jsx:'javascript',tsx:'typescript',json:'json',yml:'yaml',yaml:'yaml',
-          py:'python',sh:'shell',bash:'shell',css:'css',html:'html',xml:'xml',
-          toml:'ini',ini:'ini',cfg:'ini',conf:'ini',csv:'plaintext',rst:'plaintext'}[ext] || 'plaintext';
+  return {
+    md:'markdown', mdx:'markdown', markdown:'markdown', txt:'plaintext', rst:'plaintext',
+    csv:'plaintext', tsv:'plaintext', json:'json', jsonl:'json', ndjson:'json', sef:'json',
+    yml:'yaml', yaml:'yaml', toml:'ini', xml:'xml', svg:'xml',
+    html:'html', htm:'html', css:'css', scss:'scss', less:'css',
+    js:'javascript', mjs:'javascript', cjs:'javascript', ts:'typescript', jsx:'javascript', tsx:'typescript',
+    vue:'html', svelte:'html',
+    py:'python', rb:'ruby', php:'php', go:'go', rs:'rust', java:'java', kt:'kotlin', cs:'csharp',
+    lua:'lua', r:'r', sql:'sql', sh:'shell', bash:'shell', ps1:'powershell',
+    graphql:'plaintext', gql:'plaintext', hcl:'plaintext', tf:'plaintext',
+    ini:'ini', cfg:'ini', conf:'ini', env:'ini', properties:'ini'
+  }[ext] || 'plaintext';
 }
 
 function getMonacoTheme() {

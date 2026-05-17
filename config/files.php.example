@@ -1,0 +1,39 @@
+<?php
+// Skyddas från direkt HTTP-åtkomst
+if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) === __FILE__) {
+    http_response_code(403);
+    exit;
+}
+
+/**
+ * Kopiera till files.php och anpassa tillåtna filtyper.
+ * Se files.php för fullständig standardlista.
+ */
+return [
+
+    'allowed_extensions' => [
+        'md', 'txt', 'csv', 'json', 'sef', 'html', 'js', 'css', 'py',
+        'png', 'jpg', 'jpeg', 'gif', 'webp',
+    ],
+
+    'text_extensions' => [
+        'md', 'txt', 'csv', 'json', 'sef', 'html', 'js', 'css', 'py',
+    ],
+
+    'image_extensions' => [
+        'png', 'jpg', 'jpeg', 'gif', 'webp',
+    ],
+
+    'mime_types' => [
+        'md'   => 'text/markdown',
+        'txt'  => 'text/plain',
+        'csv'  => 'text/csv',
+        'json' => 'application/json',
+        'sef'  => 'application/vnd.smart-exam',
+        'html' => 'text/html',
+        'js'   => 'text/javascript',
+        'css'  => 'text/css',
+        'py'   => 'text/x-python',
+    ],
+
+];
