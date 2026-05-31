@@ -17,7 +17,7 @@ return [
 
     'allowed_extensions' => [
         // Dokument & data
-        'md', 'mdx', 'txt', 'rst', 'csv', 'tsv', 'json', 'jsonl', 'ndjson', 'xml', 'yml', 'yaml', 'toml',
+        'md', 'mdx', 'mmd', 'txt', 'rst', 'csv', 'tsv', 'json', 'jsonl', 'ndjson', 'xml', 'yml', 'yaml', 'toml',
         'sef', // Smart Exam Format
         // Webb & kod
         'html', 'htm', 'svg', 'css', 'scss', 'less',
@@ -31,7 +31,7 @@ return [
     ],
 
     'text_extensions' => [
-        'md', 'mdx', 'txt', 'rst', 'csv', 'tsv', 'json', 'jsonl', 'ndjson', 'xml', 'yml', 'yaml', 'toml',
+        'md', 'mdx', 'mmd', 'txt', 'rst', 'csv', 'tsv', 'json', 'jsonl', 'ndjson', 'xml', 'yml', 'yaml', 'toml',
         'sef',
         'html', 'htm', 'svg', 'css', 'scss', 'less',
         'js', 'mjs', 'cjs', 'ts', 'jsx', 'tsx', 'vue', 'svelte',
@@ -47,6 +47,7 @@ return [
     'mime_types' => [
         'md'     => 'text/markdown',
         'mdx'    => 'text/markdown',
+        'mmd'    => 'text/plain',
         'txt'    => 'text/plain',
         'rst'    => 'text/plain',
         'csv'    => 'text/csv',
