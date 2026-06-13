@@ -13,7 +13,7 @@ define('APP_NAME', 'Skill Manager');
 function skill_files_config_defaults(): array {
     return [
         'allowed_extensions' => [
-            'md', 'mdx', 'txt', 'rst', 'csv', 'tsv', 'json', 'jsonl', 'ndjson', 'xml', 'yml', 'yaml', 'toml', 'sef',
+            'md', 'mdx', 'txt', 'rst', 'csv', 'tsv', 'json', 'jsonl', 'ndjson', 'xml', 'bpmn', 'yml', 'yaml', 'toml', 'sef',
             'html', 'htm', 'svg', 'css', 'scss', 'less',
             'js', 'mjs', 'cjs', 'ts', 'jsx', 'tsx', 'vue', 'svelte',
             'py', 'rb', 'php', 'go', 'rs', 'java', 'kt', 'cs', 'lua', 'r', 'sql', 'sh', 'bash', 'ps1',
@@ -22,7 +22,7 @@ function skill_files_config_defaults(): array {
             'png', 'jpg', 'jpeg', 'gif', 'webp',
         ],
         'text_extensions' => [
-            'md', 'mdx', 'txt', 'rst', 'csv', 'tsv', 'json', 'jsonl', 'ndjson', 'xml', 'yml', 'yaml', 'toml', 'sef',
+            'md', 'mdx', 'txt', 'rst', 'csv', 'tsv', 'json', 'jsonl', 'ndjson', 'xml', 'bpmn', 'yml', 'yaml', 'toml', 'sef',
             'html', 'htm', 'svg', 'css', 'scss', 'less',
             'js', 'mjs', 'cjs', 'ts', 'jsx', 'tsx', 'vue', 'svelte',
             'py', 'rb', 'php', 'go', 'rs', 'java', 'kt', 'cs', 'lua', 'r', 'sql', 'sh', 'bash', 'ps1',
@@ -34,7 +34,7 @@ function skill_files_config_defaults(): array {
             'md' => 'text/markdown', 'mdx' => 'text/markdown', 'txt' => 'text/plain', 'rst' => 'text/plain',
             'csv' => 'text/csv', 'tsv' => 'text/tab-separated-values',
             'json' => 'application/json', 'jsonl' => 'application/json', 'ndjson' => 'application/x-ndjson',
-            'xml' => 'application/xml', 'yml' => 'text/yaml', 'yaml' => 'text/yaml', 'toml' => 'application/toml',
+            'xml' => 'application/xml', 'bpmn' => 'application/bpmn+xml', 'yml' => 'text/yaml', 'yaml' => 'text/yaml', 'toml' => 'application/toml',
             'sef' => 'application/vnd.smart-exam',
             'html' => 'text/html', 'htm' => 'text/html', 'svg' => 'image/svg+xml',
             'js' => 'text/javascript', 'css' => 'text/css', 'py' => 'text/x-python', 'sql' => 'application/sql',

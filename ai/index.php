@@ -601,7 +601,7 @@ function getLang(filename) {
   return {
     md:'markdown', mdx:'markdown', markdown:'markdown', txt:'plaintext', rst:'plaintext',
     csv:'plaintext', tsv:'plaintext', json:'json', jsonl:'json', ndjson:'json', sef:'json',
-    yml:'yaml', yaml:'yaml', toml:'ini', xml:'xml', svg:'xml',
+    yml:'yaml', yaml:'yaml', toml:'ini', xml:'xml', bpmn:'xml', svg:'xml',
     html:'html', htm:'html', css:'css', scss:'scss', less:'css',
     js:'javascript', mjs:'javascript', cjs:'javascript', ts:'typescript', jsx:'javascript', tsx:'typescript',
     vue:'html', svelte:'html',
@@ -1004,7 +1004,7 @@ function renderNode(node, depth, wrap, active, pathCount) {
 function indent(d) { return '<span class="tree-indent" style="width:' + (d*13) + 'px"></span>'; }
 function fIcon(name) {
   var ext = (name.split('.').pop() || '').toLowerCase();
-  return {md:'📄',txt:'📝',json:'📋',yml:'⚙️',yaml:'⚙️',js:'📜',ts:'📜',py:'🐍',sh:'🖥️',css:'🎨',html:'🌐',xml:'📰',csv:'📊'}[ext] || '📎';
+  return {md:'📄',txt:'📝',json:'📋',yml:'⚙️',yaml:'⚙️',js:'📜',ts:'📜',py:'🐍',sh:'🖥️',css:'🎨',html:'🌐',xml:'📰',bpmn:'📰',csv:'📊'}[ext] || '📎';
 }
 
 function getAllPaths() {

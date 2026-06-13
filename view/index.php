@@ -555,7 +555,7 @@ function renderNode(node, depth, wrap, active) {
 
 function fIcon(name) {
   var ext = name.split('.').pop().toLowerCase();
-  var m = {md:'📄',mdx:'📄',txt:'📝',rst:'📝',csv:'📊',tsv:'📊',json:'📋',jsonl:'📋',ndjson:'📋',sef:'📋',yml:'⚙️',yaml:'⚙️',toml:'⚙️',xml:'📰',js:'📜',ts:'📜',jsx:'⚛️',tsx:'⚛️',py:'🐍',rb:'💎',php:'🐘',go:'🔷',rs:'🦀',java:'☕',sql:'🗃️',sh:'🖥️',bash:'🖥️',ps1:'🖥️',css:'🎨',html:'🌐',svg:'🖼️',vue:'💚',graphql:'◈',png:'🖼️',jpg:'🖼️',jpeg:'🖼️',gif:'🖼️',webp:'🖼️',pdf:'📕'};
+  var m = {md:'📄',mdx:'📄',txt:'📝',rst:'📝',csv:'📊',tsv:'📊',json:'📋',jsonl:'📋',ndjson:'📋',sef:'📋',yml:'⚙️',yaml:'⚙️',toml:'⚙️',xml:'📰',bpmn:'📰',js:'📜',ts:'📜',jsx:'⚛️',tsx:'⚛️',py:'🐍',rb:'💎',php:'🐘',go:'🔷',rs:'🦀',java:'☕',sql:'🗃️',sh:'🖥️',bash:'🖥️',ps1:'🖥️',css:'🎨',html:'🌐',svg:'🖼️',vue:'💚',graphql:'◈',png:'🖼️',jpg:'🖼️',jpeg:'🖼️',gif:'🖼️',webp:'🖼️',pdf:'📕'};
   return m[ext] || '📎';
 }
 
