@@ -19,6 +19,7 @@ return [
         // Dokument & data
         'md', 'mdx', 'mmd', 'txt', 'rst', 'csv', 'tsv', 'json', 'jsonl', 'ndjson', 'xml', 'bpmn', 'yml', 'yaml', 'toml',
         'sef', // Smart Exam Format
+        'ac',  // ArchiCode
         // Webb & kod
         'html', 'htm', 'svg', 'css', 'scss', 'less',
         'js', 'mjs', 'cjs', 'ts', 'jsx', 'tsx', 'vue', 'svelte',
@@ -33,6 +34,7 @@ return [
     'text_extensions' => [
         'md', 'mdx', 'mmd', 'txt', 'rst', 'csv', 'tsv', 'json', 'jsonl', 'ndjson', 'xml', 'bpmn', 'yml', 'yaml', 'toml',
         'sef',
+        'ac',
         'html', 'htm', 'svg', 'css', 'scss', 'less',
         'js', 'mjs', 'cjs', 'ts', 'jsx', 'tsx', 'vue', 'svelte',
         'py', 'rb', 'php', 'go', 'rs', 'java', 'kt', 'cs', 'lua', 'r', 'sql', 'sh', 'bash', 'ps1',
@@ -61,6 +63,7 @@ return [
         'yaml'   => 'text/yaml',
         'toml'   => 'application/toml',
         'sef'    => 'application/vnd.smart-exam', // justera om SEF är JSON: application/json
+        'ac'     => 'application/vnd.archicode', // ArchiCode — justera vid behov (t.ex. application/json)
         'html'   => 'text/html',
         'htm'    => 'text/html',
         'svg'    => 'image/svg+xml',

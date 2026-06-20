@@ -10,11 +10,13 @@ A professional PHP-based web application for creating, editing, and managing `.s
 
 ## 🚀 Latest Updates
 
-- 📁 **Configurable file types** — Allowed extensions and MIME types in `config/files.php` (text, code, images, `.sef`, `.csv`, `.txt`, and more)
-- 🔗 **Direct file URLs** — Open any archive file via `/view/?file=name.skill&path=docs/test.html` (shareable links, no blob URLs)
+- 👥 **Multi-user ACL** — User accounts in `config/users.php` (bcrypt passwords); roles `admin` and `user`
+- ⚙️ **Settings page** — Guest access, per-skill visibility (`PUBLIC` / `INTERNAL`), and user management (admin only)
+- 📁 **Configurable file types** — Allowed extensions and MIME types in `config/files.php` (`.sef`, `.ac`, `.csv`, code, images, and more)
+- 🔗 **Direct file URLs** — Open any archive file via `/view/?file=name.skill&path=docs/test.html` (shareable links)
 - ✏️ **Multi-format editing** — Monaco syntax highlighting for many text types; markdown preview only for `.md`
 - 👁️ **Smarter viewer** — `.md` rendered in the UI; other types open in a new tab with correct `Content-Type`
-- 🌐 **UI language (i18n)** — Swedish and English interface via `config/lang.php` (default: Swedish); optional overrides and support for additional language codes
+- 🌐 **UI language (i18n)** — Swedish and English interface via `config/lang.php` (default: Swedish)
 - 🔍 **Enhanced Mermaid Diagrams** — Interactive fullscreen viewing with pan/zoom, text selection, and diagram source code access
 - 📄 **Improved YAML Support** — Enhanced frontmatter parsing with multi-line description support using YAML block scalars
 - 🖨️ **Print-Friendly Styles** — Optimized printing layouts with clean, professional output
@@ -33,9 +35,9 @@ A professional PHP-based web application for creating, editing, and managing `.s
 - 🗂️ **Skill Library Management** — Upload, organize, and manage .skill files with searchable metadata
 - ✏️ **Dual Editor Experience** — Choose between Monaco Editor (VS Code-style) or AI-assisted editing
 - 👁️ **Live Preview** — Real-time Markdown rendering for `.md` with enhanced Mermaid diagram support and fullscreen viewing
-- 📂 **Many file types** — HTML, JSON, JS, CSS, Python, SVG, `.sef` (Smart Exam Format), CSV, images, and more (configurable)
+- 📂 **Many file types** — HTML, JSON, JS, CSS, Python, SVG, `.sef` (Smart Exam Format), `.ac` (ArchiCode), CSV, BPMN, images, and more (configurable)
+- 🔐 **Access control** — Optional guest access; per-skill `visibility` in SKILL.md; multi-user login with hashed passwords
 - 🖱️ **Interactive Diagrams** — Pan, zoom, and select text in Mermaid diagrams with dedicated fullscreen mode
-- 🔐 **Secure Authentication** — Password-protected editing with session management
 - 📱 **Responsive Design** — Works seamlessly across desktop and mobile devices with print-friendly styles
 - 🏷️ **Tag System** — Organize skills with tags and advanced filtering
 - 📥 **Import/Export** — Upload existing .skill files or download for backup
@@ -57,7 +59,7 @@ A professional PHP-based web application for creating, editing, and managing `.s
 ```
 skill/
 ├── index.php           # Dashboard — searchable skill library with upload
-├── login.php           # Authentication page  
+├── login.php           # Login (username + password)
 ├── logout.php          # Logout handler
 ├── download.php        # Serves downloads as .skill or .zip (filename extension option)
 ├── download_content.php # Bulk content download (requires authentication)
@@ -68,13 +70,19 @@ skill/
 ├── AI.md               # AI functionality documentation
 ├── MCP.md              # AI-focused MCP documentation
 ├── config/
-│   ├── config.php      # Password and settings
-│   ├── files.php       # Allowed file extensions and MIME types for archives
-│   ├── files.php.example # Template for files.php
-│   ├── lang.php        # UI locale (sv/en/…) and optional string overrides
-│   ├── ai.php          # AI configuration (providers, models, system prompts)
-│   ├── key.env.example # Template for API keys and environment variables
-│   └── .htaccess       # Blocks direct HTTP access to /config/
+│   ├── config.php        # App name, session lifetime; legacy password for first-time user migration
+│   ├── users.php         # User accounts (bcrypt hashes) — auto-created on first login
+│   ├── users.php.example # Template for users.php
+│   ├── settings.php      # Guest access and skill visibility rules
+│   ├── settings.php.example
+│   ├── files.php         # Allowed file extensions and MIME types for archives
+│   ├── files.php.example
+│   ├── lang.php          # UI locale (sv/en/…) and optional string overrides
+│   ├── ai.php            # AI configuration (providers, models, system prompts)
+│   ├── key.env.example   # Template for API keys and environment variables
+│   └── .htaccess         # Blocks direct HTTP access to /config/
+├── settings/
+│   └── index.php         # Access & user settings (admin only)
 ├── ai/
 │   ├── index.php       # AI-powered skill editor
 │   ├── chat.php        # AI chat API endpoint
@@ -93,23 +101,24 @@ skill/
 ## 🖥️ Application Pages
 
 ### 🏠 Dashboard (`/`)
-**Public overview (no login required).**
-- Searchable and sortable table of all `.skill` files
+**Overview — guest access depends on settings (see `/settings/`).**
+- Searchable and sortable table of `.skill` files (filtered by login state and visibility)
 - Filter by tags via dropdown or click on tag in list
-- Columns: title, description, tags, author, file count, size, modified
+- Columns: title, description, tags, author, file count, size, modified; **visibility** (`PUBLIC` / `INTERNAL`) when logged in
 - Upload (authenticated): accepts `.skill` and `.zip`
 - Upload validation: archive entries must use extensions listed in `config/files.php` (`allowed_extensions`)
 - `.zip` upload conversion: automatically creates `.skill` in `/content` (only allowed files are copied)
 - Actions by auth state:
-  - Guest: View, Download
-  - Authenticated: View, Download, Edit, Delete
+  - Guest: View/Download public skills (if guest access enabled)
+  - Authenticated: View, Download, Edit, Delete (all skills including `INTERNAL`)
 - Download button includes dropdown format choice (`.skill` or `.zip`)
+- **Settings** button (admin only) in the header
 
 ### 👁️ Skill Viewer (`/view/?file=name.skill`)
-**Public access — no authentication required.**
+**Access depends on global settings and per-skill `visibility` in SKILL.md.**
 - File tree sidebar showing all files in the ZIP archive
 - **`.md` files** — Rendered in the main panel via [marked.js](https://marked.js.org/) with enhanced [Mermaid](https://mermaid.js.org/) diagram support
-- **Other files** (HTML, JSON, images, `.sef`, etc.) — Open in a new browser tab via a shareable query-string URL
+- **Other files** (HTML, JSON, images, `.sef`, `.ac`, etc.) — Open in a new browser tab via a shareable query-string URL
 - **Direct links** to any file in the archive:
   ```
   /view/?file=my-skill.skill&path=docs/test.html
@@ -122,12 +131,13 @@ skill/
 - Toggle between rendered view and raw text (for `.md` in the main panel)
 - Copy button for file contents
 - Edit button shown only when authenticated (guests see Login button instead)
+- **Settings** button (admin only, header / mobile menu)
 - Download button includes format dropdown (`.skill` / `.zip`)
 - **Print-friendly** — Optimized printing with clean layout (hides navigation, headers, etc.)
 
 ### ✏️ Skill Editor (`/edit/?file=name.skill` or `/edit/` for new)
 **Requires authentication.**
-- [Monaco Editor](https://microsoft.github.io/monaco-editor/) (VS Code's editor) with syntax highlighting per file type (JSON, HTML, CSS, Python, SQL, `.sef`, and more)
+- [Monaco Editor](https://microsoft.github.io/monaco-editor/) (VS Code's editor) with syntax highlighting per file type (JSON, HTML, CSS, Python, SQL, `.sef`, `.ac`, and more)
 - File tree sidebar — click to switch files, each file has its own undo/redo
 - **Live markdown preview** (split pane) for `.md` only — other text types use the editor full-width without preview rendering
 - Add new files to archive via `+ File` button with smart structure templates
@@ -151,8 +161,14 @@ skill/
 - All traditional editing features (file management, templates, etc.)
 - AI provider settings with model selection and temperature control
 
+### ⚙️ Settings (`/settings/`)
+**Requires admin login.**
+- **Access** — Allow or deny guest access; enforce `visibility` from SKILL.md; default visibility for new skills
+- **Users (ACL)** — Add/edit/delete users; change roles (`admin` / `user`) and passwords (stored as bcrypt in `config/users.php`)
+- All settings persisted under `/config/` (`settings.php`, `users.php`)
+
 ### 🤖 MCP Endpoint (`/mcp/index.php`)
-**Public read endpoint for AI clients (JSON-RPC style).**
+**Read endpoint for AI clients (JSON-RPC style). Respects access and visibility settings.**
 - Methods: `initialize`, `tools/list`, `tools/call`, `ping`
 - Tools:
   - `list_skills`
@@ -170,10 +186,10 @@ my-skill/
 ├── scripts/            # Optional — executable code, e.g. Python or shell 
 ├── references/         # Optional — reference documents, style guides, specs
 ├── templates/          # Optional — output templates
-└── docs/               # Optional — HTML, JSON, .sef, CSV, or other allowed types
+└── docs/               # Optional — HTML, JSON, .sef, .ac, CSV, or other allowed types
 ```
 
-**Allowed entry types** are defined in `config/files.php`. By default this includes Markdown, plain text (`.txt`), CSV/TSV, JSON/JSONL, HTML, SVG, common source files (JS, TS, CSS, Python, PHP, SQL, …), **`.sef` (Smart Exam Format)**, config files (`.env`, `.ini`, …), and raster images (PNG, JPEG, GIF, WebP). Adjust the lists to match your workflow.
+**Allowed entry types** are defined in `config/files.php`. By default this includes Markdown, plain text, CSV/TSV, JSON/JSONL, HTML, SVG, BPMN, common source files (JS, TS, CSS, Python, PHP, SQL, …), **`.sef` (Smart Exam Format)**, **`.ac` (ArchiCode)**, config files (`.env`, `.ini`, …), and raster images. Adjust the lists to match your workflow.
 
 ### SKILL.md — Frontmatter Structure
 
@@ -188,6 +204,7 @@ description: >
 author: Your Name
 version: 1.0
 tags: php, web, api
+visibility: public
 location: /optional/path/reference
 ---
 
@@ -201,14 +218,16 @@ location: /optional/path/reference
 2. Step two
 ```
 
-**Enhanced YAML Support**: The frontmatter parser now supports YAML block scalars (`>` and `|`) for multi-line descriptions, allowing for better documentation formatting.
+**Enhanced YAML Support**: The frontmatter parser supports YAML block scalars (`>` and `|`) for multi-line descriptions.
+
+**Visibility** (`public` or `internal`): Controls who can see the skill when guest access is enabled and per-skill visibility is active in settings. Logged-in users always see all skills. New skills get the default visibility from `/settings/`.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - **PHP 8.1+** with `ZipArchive` extension enabled
 - **Web server** (Apache, Nginx, or PHP built-in server for development)
-- **Write permissions** on the `/content/` directory for skill storage
+- **Write permissions** on `/content/` for skill storage and on `/config/` if saving settings/users via the web UI
 
 ### Installation Steps
 
@@ -226,18 +245,21 @@ location: /optional/path/reference
    chmod 750 config/
    ```
 
-3. **Configure your password and settings**
+3. **Configure the application**
    ```bash
-   # Copy the configuration templates
    cp config/config.php.example config/config.php
-   cp config/files.php.example config/files.php   # if files.php is not already present
+   cp config/files.php.example config/files.php    # if not already present
+   cp config/settings.php.example config/settings.php
    ```
-   Edit `config/config.php` and update the password:
+   Edit `config/config.php`:
    ```php
-   'password' => 'your-secure-password',
+   'password' => 'your-secure-password',  // used once to create config/users.php (admin account)
+   'session_lifetime' => 2592000,
    ```
 
-   Edit `config/files.php` to control which file extensions are allowed in uploads and how they are served (see [Configuration Options](#-configuration-options)).
+   On **first login** (`admin` + password above), the app creates `config/users.php` with a bcrypt hash. Change the password under **Settings → Users** afterward.
+
+   Edit `config/files.php` for allowed upload types (see [Configuration Options](#-configuration-options)).
 
    **Optional: Configure AI providers**
    ```bash
@@ -261,8 +283,9 @@ location: /optional/path/reference
 
 5. **Start managing skills!**
    - Browse to http://localhost:8000
-   - Login with your configured password
-   - Create your first skill by clicking "New Skill"
+   - Log in as **admin** with your configured password
+   - Open **Settings** (⚙️) to manage access, users, and defaults
+   - Create your first skill via **New Skill**
 
 ### ⚡ Quick Test
 Upload a sample skill or create a new one to test all features are working correctly.
@@ -270,8 +293,24 @@ Upload a sample skill or create a new one to test all features are working corre
 ## 🔧 Configuration Options
 
 Edit `config/config.php` to customize:
-- `password`: Login password (supports bcrypt hashing)
+- `password`: Legacy bootstrap password — used only when `config/users.php` is created on first login
 - `session_lifetime`: How long login sessions last (default: 1 month)
+- `app_name`: Application title in the UI
+
+Edit `config/settings.php` for **access control**:
+
+| Key | Purpose |
+|-----|---------|
+| `allow_guest_access` | If `false`, all viewing/downloading requires login |
+| `use_skill_visibility` | If `true`, guests only see skills with `visibility: public` in SKILL.md |
+| `default_skill_visibility` | `public` or `internal` — used in new-skill template and when frontmatter omits `visibility` |
+
+Edit `config/users.php` for **user accounts** (normally managed via `/settings/`):
+
+| Field | Purpose |
+|-------|---------|
+| `users[username].password` | Bcrypt hash only (never plaintext) |
+| `users[username].role` | `admin` (settings + users) or `user` (edit/view skills) |
 
 Edit `config/files.php` to customize **allowed file types** in `.skill` archives:
 
@@ -282,10 +321,11 @@ Edit `config/files.php` to customize **allowed file types** in `.skill` archives
 | `image_extensions` | Embedded as images in the viewer (up to 512 KB per file when loading the tree) |
 | `mime_types` | `Content-Type` when serving a file via `&path=` (and for image data URLs) |
 
-Default highlights include `.md`, `.txt`, `.csv`, `.tsv`, `.json`, `.sef`, `.html`, `.svg`, and common code/config extensions. Example — add or adjust Smart Exam Format MIME if SEF files are JSON:
+Default highlights include `.md`, `.txt`, `.csv`, `.json`, `.sef`, `.ac`, `.html`, `.svg`, `.bpmn`, and common code/config extensions. Example MIME overrides:
 
 ```php
-'sef' => 'application/json',  // or keep application/vnd.smart-exam
+'sef' => 'application/json',           // Smart Exam Format
+'ac'  => 'application/vnd.archicode',  // ArchiCode
 ```
 
 Copy `config/files.php.example` as a starting point for a minimal allowlist.
@@ -320,29 +360,30 @@ Edit `config/key.env` for sensitive configuration:
 
 ## 🔒 Security Notes
 
-- **Production deployment**: Use HTTPS and strong passwords
-- **File permissions**: Ensure `/content/` is writable but not executable
-- **Web server config**: Block direct access to `/config/` directory
-- **Password hashing**: Use bcrypt for password storage in production:
-  ```bash
-  php -r "echo password_hash('your-password', PASSWORD_BCRYPT);"
-  ```
+- **Production deployment**: Use HTTPS and strong passwords (minimum 6 characters)
+- **File permissions**: Ensure `/content/` is writable; `/config/` must be writable only if using the settings UI to save users/settings
+- **Web server config**: Block direct HTTP access to `/config/` (`.htaccess` included for Apache)
+- **Passwords**: Stored as bcrypt hashes in `config/users.php` — not in `config.php`
+- **Roles**: Only `admin` users can open `/settings/` and manage accounts
 
 ## 📖 Usage
 
 1. **Create a new skill:** Click "New Skill" or visit `/edit/`
-2. **Edit existing skills:** Click "Edit" next to any skill in the dashboard
-3. **View skills:** Skills can be viewed publicly at `/view/?file=skillname.skill`
-4. **Link to a file inside a skill:** `/view/?file=skillname.skill&path=references/guide.html`
-5. **Upload skills:** Drag and drop `.skill` or `.zip` files onto the dashboard (entries must match `allowed_extensions`)
-6. **Organize with tags:** Use frontmatter tags for easy filtering and searching
+2. **Log in:** Use username + password at `/login.php` (default user: `admin`)
+3. **Settings (admin):** Open `/settings/` to configure guest access, visibility, and users
+4. **Edit existing skills:** Click "Edit" next to any skill in the dashboard
+5. **View skills:** `/view/?file=skillname.skill` (subject to access settings)
+6. **Link to a file inside a skill:** `/view/?file=skillname.skill&path=references/guide.html`
+7. **Upload skills:** Drag and drop `.skill` or `.zip` onto the dashboard (entries must match `allowed_extensions`)
+8. **Organize with tags:** Use frontmatter tags for easy filtering and searching
 
 ## 🔧 Troubleshooting
 
 **Common Issues:**
 - **"Cannot write to content directory"**: Ensure `/content/` has write permissions (`chmod 755 content/`)
 - **"ZipArchive not found"**: Install PHP zip extension (`php-zip` package)
-- **Login not working**: Verify `config/config.php` exists and password is set correctly
+- **Login not working**: Verify `config/config.php` exists; on first run log in as `admin`. Check that `config/users.php` was created and is readable
+- **Cannot save settings**: Ensure PHP can write to `config/` (`settings.php`, `users.php`)
 - **Styles not loading**: Check that all files were uploaded and web server can serve static files
 - **Upload rejected for a file type**: Add the extension to `allowed_extensions` in `config/files.php`
 - **"File not found in archive"** on a direct link: Use the path as stored in the ZIP (e.g. `docs/test.html`, not `/docs/test.html`)
@@ -371,6 +412,7 @@ cd claude-skill-manager
 
 # Set up for development
 cp config/config.php.example config/config.php
+cp config/settings.php.example config/settings.php
 php -S localhost:8000
 
 # Make your changes and test!
@@ -411,9 +453,9 @@ This is an **active project** currently in production use. We're continuously im
 - [ ] **API Integration** — REST API for programmatic skill management
 - [ ] **Bulk Operations** — Multi-select actions for managing multiple skills
 - [ ] **Better Search** — Full-text search within skill contents
-- [ ] **Themes** — Light/dark mode and custom themes
+- [x] **Themes** — Light/dark mode
 - [ ] **Backup/Restore** — Automated backup system
-- [ ] **Collaboration** — Multi-user support with permissions
+- [x] **Collaboration** — Multi-user accounts with admin/user roles
 
 ## 🔗 Related Links
 

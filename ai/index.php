@@ -250,6 +250,7 @@ html,body{height:100%;overflow:hidden}
   <div class="hdr-sep"></div>
   <div class="hdr-title"><?= h($pageTitle) ?></div>
   <div class="hdr-actions">
+    <?php skill_render_settings_button('../'); ?>
     <a href="<?= h($switchToEditUrl) ?>" class="btn btn-sm btn-teal btn-switch-mode" title="<?= h($isNew ? __('ai.switch_classic_title_new') : __('ai.switch_classic_title')) ?>">✏️ <?= h(__('ai.switch_classic')) ?></a>
     <?php if (!$isNew): ?>
     <a href="../view/?file=<?= urlencode($filename) ?>" class="btn btn-white btn-sm">👁 <?= h(__('common.view')) ?></a>
@@ -600,7 +601,7 @@ function getLang(filename) {
   var ext = (filename.split('.').pop() || '').toLowerCase();
   return {
     md:'markdown', mdx:'markdown', markdown:'markdown', txt:'plaintext', rst:'plaintext',
-    csv:'plaintext', tsv:'plaintext', json:'json', jsonl:'json', ndjson:'json', sef:'json',
+    csv:'plaintext', tsv:'plaintext', json:'json', jsonl:'json', ndjson:'json', sef:'json', ac:'json',
     yml:'yaml', yaml:'yaml', toml:'ini', xml:'xml', bpmn:'xml', svg:'xml',
     html:'html', htm:'html', css:'css', scss:'scss', less:'css',
     js:'javascript', mjs:'javascript', cjs:'javascript', ts:'typescript', jsx:'javascript', tsx:'typescript',

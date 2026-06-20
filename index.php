@@ -71,7 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$skills = get_skills();
+$skills = skill_get_skills_for_user($isAuthed);
+$guestBlocked = !$isAuthed && !skill_public_access_enabled();
 
 // Samla alla unika taggar för filter-dropdown
 $allTags = [];
@@ -125,6 +126,7 @@ $skillsJson = array_map(fn($s) => [
     'size'     => fmt_size($s['size']),
     'modified' => date('Y-m-d H:i', $s['modified']),
     'ts'       => $s['modified'],
+    'visibility' => skill_skill_visibility($s['meta'] ?? []),
 ], $skills);
 ?>
 <!DOCTYPE html>
@@ -240,6 +242,7 @@ a.tag { color: var(--text-2); }
   <div class="hdr-title"><?= $isAuthed ? h(__('index.hdr_manage')) : h(__('index.hdr_overview')) ?></div>
   <div class="hdr-actions">
     <?php if ($isAuthed): ?>
+    <?php skill_render_settings_button(); ?>
     <a href="edit/" class="btn btn-white btn-sm">✏️ <?= h(__('index.btn_new_skill')) ?></a>
     <a href="download_content.php" class="btn btn-white btn-sm" title="<?= h(__('index.btn_all_content_title')) ?>">⬇ <?= h(__('index.btn_all_content')) ?></a>
     <a href="logout.php" class="btn btn-white btn-sm" onclick="return confirm(<?= json_encode(__('common.confirm_logout'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_UNESCAPED_UNICODE) ?>)">🔓 <?= h(__('common.logout')) ?></a>
@@ -267,7 +270,11 @@ a.tag { color: var(--text-2); }
       <span class="icon">🏠</span>
       <span><?= h(__('common.home')) ?></span>
     </a>
-    <?php if ($isAuthed): ?>
+    <?php if ($isAuthed && skill_is_admin()): ?>
+    <a href="settings/" class="mobile-nav-item">
+      <span class="icon">⚙️</span>
+      <span><?= h(__('common.settings')) ?></span>
+    </a>
     <a href="edit/" class="mobile-nav-item">
       <span class="icon">✏️</span>
       <span><?= h(__('index.btn_new_skill')) ?></span>
@@ -352,7 +359,11 @@ a.tag { color: var(--text-2); }
   <?php if (empty($skills)): ?>
   <div class="empty-state">
     <div class="ei">🗂️</div>
-    <p><?= __('index.empty') ?><?php if ($isAuthed): ?><br><?= __('index.empty_upload') ?><?php endif; ?></p>
+    <p><?php if ($guestBlocked): ?>
+      <?= h(__('index.empty_guest_blocked')) ?><br><?= __('index.empty_guest_login') ?>
+    <?php else: ?>
+      <?= __('index.empty') ?><?php if ($isAuthed): ?><br><?= __('index.empty_upload') ?><?php endif; ?>
+    <?php endif; ?></p>
   </div>
   <?php else: ?>
 
@@ -360,6 +371,9 @@ a.tag { color: var(--text-2); }
     <thead>
       <tr>
         <th class="col-title"   onclick="sortBy('title')">   <?= h(__('index.col_title')) ?>       <i class="sort-arrow" id="arr-title">↕</i></th>
+        <?php if ($isAuthed && skill_use_skill_visibility()): ?>
+        <th class="col-meta" onclick="sortBy('visibility')"><?= h(__('index.col_visibility')) ?> <i class="sort-arrow" id="arr-visibility">↕</i></th>
+        <?php endif; ?>
         <th class="col-tags"    onclick="sortBy('tags')">    <?= h(__('index.col_tags')) ?>      <i class="sort-arrow" id="arr-tags">↕</i></th>
         <th class="col-meta"    onclick="sortBy('author')">  <?= h(__('index.col_author')) ?>  <i class="sort-arrow" id="arr-author">↕</i></th>
         <th class="col-meta"    onclick="sortBy('files')">   <?= h(__('index.col_files')) ?>       <i class="sort-arrow" id="arr-files">↕</i></th>
@@ -378,11 +392,13 @@ a.tag { color: var(--text-2); }
       $version  = $s['meta']['version'] ?? '';
       $numFiles = $s['numFiles'] ?? 0;
       $date     = date('Y-m-d H:i', $s['modified']);
+      $vis      = skill_skill_visibility($s['meta'] ?? []);
     ?>
     <tr data-title="<?= h(strtolower($title)) ?>"
         data-desc="<?= h(strtolower($desc)) ?>"
         data-tags="<?= h(strtolower($tags)) ?>"
         data-author="<?= h(strtolower($author)) ?>"
+        data-visibility="<?= h($vis) ?>"
         data-files="<?= $numFiles ?>"
         data-modified="<?= $s['modified'] ?>"
         data-size="<?= $s['size'] ?>">
@@ -392,6 +408,13 @@ a.tag { color: var(--text-2); }
         <div class="row-desc"><?= h($desc) ?></div>
         <?php endif; ?>
       </td>
+      <?php if ($isAuthed && skill_use_skill_visibility()): ?>
+      <td class="col-meta">
+        <span class="tag" style="<?= $vis === 'internal' ? 'background:#fdecea;color:#8b1a1a' : '' ?>">
+          <?= h($vis === 'internal' ? __('index.visibility_internal') : __('index.visibility_public')) ?>
+        </span>
+      </td>
+      <?php endif; ?>
       <td class="col-tags">
         <?php foreach (array_filter(array_map('trim', explode(',', $tags))) as $tag):
           $tagHref = '?tag=' . rawurlencode($tag);

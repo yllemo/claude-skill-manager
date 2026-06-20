@@ -7,8 +7,8 @@ if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) 
 return [
 
     // ── PASSWORD ────────────────────────────────────────
-    // Change to your desired password. Also supports bcrypt hash:
-    //   php -r "echo password_hash('my-password', PASSWORD_BCRYPT);"
+    // Legacy: används endast vid första migrering till config/users.php (admin-konto).
+    // Nya installationer: skapa config/users.php via inställningar eller låt appen migrera automatiskt.
     'password' => 'admin123',
 
     // ── SESSION ─────────────────────────────────────────
@@ -19,5 +19,8 @@ return [
     'app_name' => 'Skill Manager',
 
     // Tillåtna filtyper i .skill-arkiv: se config/files.php (kopiera från files.php.example)
+
+    // Åtkomst & synlighet: se config/settings.php (kopiera från settings.php.example)
+    // Användarkonton (ACL): se config/users.php (skapas automatiskt från password ovan)
 
 ];

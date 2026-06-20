@@ -12,6 +12,8 @@ if (!$filePath) {
 }
 
 $filename  = basename($filePath);
+skill_require_skill_view($filename, '../login.php');
+
 $entryPath = sanitize_entry((string)($_GET['path'] ?? ''));
 $serveRaw  = array_key_exists('raw', $_GET) && (string)($_GET['raw'] ?? '') !== '0';
 
@@ -334,6 +336,9 @@ html,body{height:100%;overflow:hidden}
         <a class="hdr-split-opt" href="../download.php?file=<?= urlencode($filename) ?>&amp;ext=zip" role="menuitem"><?= h(__('index.dl_as_zip')) ?></a>
       </div>
     </details>
+    <?php if ($isAuthed): ?>
+    <?php skill_render_settings_button('../', true); ?>
+    <?php endif; ?>
     <button class="theme-btn" onclick="toggleTheme()" title="<?= h(__('common.theme_toggle')) ?>">🌓</button>
     <button class="hamburger-btn" onclick="toggleMobileNav()" aria-label="<?= h(__('common.menu')) ?>">
       <span></span>
@@ -364,6 +369,12 @@ html,body{height:100%;overflow:hidden}
       <span class="icon">✏️</span>
       <span><?= h(__('common.edit')) ?></span>
     </a>
+    <?php if (skill_is_admin()): ?>
+    <a href="../settings/" class="mobile-nav-item">
+      <span class="icon">⚙️</span>
+      <span><?= h(__('common.settings')) ?></span>
+    </a>
+    <?php endif; ?>
     <?php else: ?>
     <a href="../login.php?back=<?= urlencode($loginBack) ?>" class="mobile-nav-item">
       <span class="icon">🔐</span>
@@ -398,8 +409,8 @@ html,body{height:100%;overflow:hidden}
       <div class="sb-title"><?= h($title) ?></div>
       <div class="sb-meta"><?= h(__('view.files_count', ['n' => (string)$numFiles, 'size' => fmt_size($totalSize)])) ?></div>
       <div class="sb-actions">
-        <?php if ($isAuthed): ?>
-        <a href="../edit/?file=<?= urlencode($filename) ?>" class="btn btn-xs btn-teal">✏️ <?= h(__('common.edit')) ?></a>
+    <?php if ($isAuthed): ?>
+    <a href="../edit/?file=<?= urlencode($filename) ?>" class="btn btn-xs btn-teal">✏️ <?= h(__('common.edit')) ?></a>
         <?php else: ?>
         <a href="../login.php?back=<?= urlencode($loginBack) ?>" class="btn btn-xs btn-teal">🔐 <?= h(__('common.login')) ?></a>
         <?php endif; ?>
@@ -432,6 +443,16 @@ html,body{height:100%;overflow:hidden}
     <div class="sb-section">
       <div class="sb-section-lbl"><?= h(__('view.section_tags')) ?></div>
       <?php foreach ($tags as $tag): ?><span class="tag"><?= h($tag) ?></span><?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
+    <?php if ($isAuthed && skill_use_skill_visibility()): ?>
+    <?php $skillVis = skill_skill_visibility($skillMeta); ?>
+    <div class="sb-section">
+      <div class="sb-section-lbl"><?= h(__('index.col_visibility')) ?></div>
+      <span class="tag" style="<?= $skillVis === 'internal' ? 'background:#fdecea;color:#8b1a1a' : '' ?>">
+        <?= h($skillVis === 'internal' ? __('index.visibility_internal') : __('index.visibility_public')) ?>
+      </span>
     </div>
     <?php endif; ?>
 
@@ -555,7 +576,7 @@ function renderNode(node, depth, wrap, active) {
 
 function fIcon(name) {
   var ext = name.split('.').pop().toLowerCase();
-  var m = {md:'📄',mdx:'📄',txt:'📝',rst:'📝',csv:'📊',tsv:'📊',json:'📋',jsonl:'📋',ndjson:'📋',sef:'📋',yml:'⚙️',yaml:'⚙️',toml:'⚙️',xml:'📰',bpmn:'📰',js:'📜',ts:'📜',jsx:'⚛️',tsx:'⚛️',py:'🐍',rb:'💎',php:'🐘',go:'🔷',rs:'🦀',java:'☕',sql:'🗃️',sh:'🖥️',bash:'🖥️',ps1:'🖥️',css:'🎨',html:'🌐',svg:'🖼️',vue:'💚',graphql:'◈',png:'🖼️',jpg:'🖼️',jpeg:'🖼️',gif:'🖼️',webp:'🖼️',pdf:'📕'};
+  var m = {md:'📄',mdx:'📄',txt:'📝',rst:'📝',csv:'📊',tsv:'📊',json:'📋',jsonl:'📋',ndjson:'📋',sef:'📋',ac:'📐',yml:'⚙️',yaml:'⚙️',toml:'⚙️',xml:'📰',bpmn:'📰',js:'📜',ts:'📜',jsx:'⚛️',tsx:'⚛️',py:'🐍',rb:'💎',php:'🐘',go:'🔷',rs:'🦀',java:'☕',sql:'🗃️',sh:'🖥️',bash:'🖥️',ps1:'🖥️',css:'🎨',html:'🌐',svg:'🖼️',vue:'💚',graphql:'◈',png:'🖼️',jpg:'🖼️',jpeg:'🖼️',gif:'🖼️',webp:'🖼️',pdf:'📕'};
   return m[ext] || '📎';
 }
 

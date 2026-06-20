@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../_auth.php';
 require_once __DIR__ . '/../_common.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -101,7 +102,7 @@ function mcp_tools(): array {
 function mcp_call_tool(string $toolName, array $args): array {
     try {
         if ($toolName === 'list_skills') {
-            $skills = get_skills();
+            $skills = skill_get_skills_for_user();
             $payload = array_map(static function (array $s): array {
                 $meta = $s['meta'] ?? [];
                 return [
@@ -111,6 +112,7 @@ function mcp_call_tool(string $toolName, array $args): array {
                     'tags' => (string)($meta['tags'] ?? ''),
                     'author' => (string)($meta['author'] ?? ''),
                     'version' => (string)($meta['version'] ?? ''),
+                    'visibility' => skill_skill_visibility($meta),
                     'numFiles' => (int)($s['numFiles'] ?? 0),
                     'sizeBytes' => (int)($s['size'] ?? 0),
                     'modifiedTs' => (int)($s['modified'] ?? 0),
@@ -126,6 +128,9 @@ function mcp_call_tool(string $toolName, array $args): array {
                 return mcp_error_result('Skill not found: ' . $file);
             }
             $meta = get_skill_meta($path);
+            if (!skill_user_can_view_skill($meta)) {
+                return mcp_error_result('Access denied: ' . $file);
+            }
             $entries = read_zip_files($path);
             $texts = [];
             foreach ($entries as $name => $entry) {
@@ -151,7 +156,7 @@ function mcp_call_tool(string $toolName, array $args): array {
             }
             $q = strtolower($query);
             $hits = [];
-            foreach (get_skills() as $s) {
+            foreach (skill_get_skills_for_user() as $s) {
                 $meta = $s['meta'] ?? [];
                 $title = (string)($meta['title'] ?? pathinfo((string)$s['filename'], PATHINFO_FILENAME));
                 $desc = (string)($meta['description'] ?? '');

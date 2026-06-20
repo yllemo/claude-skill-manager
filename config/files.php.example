@@ -12,12 +12,12 @@ if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) 
 return [
 
     'allowed_extensions' => [
-        'md', 'txt', 'csv', 'json', 'sef', 'xml', 'bpmn', 'html', 'js', 'css', 'py',
+        'md', 'txt', 'csv', 'json', 'sef', 'ac', 'xml', 'bpmn', 'html', 'js', 'css', 'py',
         'png', 'jpg', 'jpeg', 'gif', 'webp',
     ],
 
     'text_extensions' => [
-        'md', 'txt', 'csv', 'json', 'sef', 'xml', 'bpmn', 'html', 'js', 'css', 'py',
+        'md', 'txt', 'csv', 'json', 'sef', 'ac', 'xml', 'bpmn', 'html', 'js', 'css', 'py',
     ],
 
     'image_extensions' => [
@@ -30,6 +30,7 @@ return [
         'csv'  => 'text/csv',
         'json' => 'application/json',
         'sef'  => 'application/vnd.smart-exam',
+        'ac'   => 'application/vnd.archicode',
         'xml'  => 'application/xml',
         'bpmn' => 'application/bpmn+xml',
         'html' => 'text/html',

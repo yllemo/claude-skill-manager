@@ -62,6 +62,9 @@ function skill_lang_builtin_all(): array {
         'common.logout' => 'Logga ut',
         'common.login' => 'Logga in',
         'common.save' => 'Spara',
+        'common.cancel' => 'Avbryt',
+        'common.settings' => 'Inställningar',
+        'common.settings_title' => 'Inställningar för åtkomst och synlighet',
         'common.close' => 'Stäng',
         'common.help' => 'Hjälp',
         'common.download' => 'Ladda ner',
@@ -99,7 +102,12 @@ function skill_lang_builtin_all(): array {
         'index.dl_as_zip' => 'Som .zip',
         'index.confirm_delete' => 'Radera {name}?',
         'index.empty' => 'Inga .skill-filer hittades.',
+        'index.empty_guest_blocked' => 'Inloggning krävs för att se skills.',
+        'index.empty_guest_login' => '<a href="login.php">Logga in</a> för att fortsätta.',
         'index.empty_upload' => 'Ladda upp en befintlig eller <a href="edit/">skapa en ny</a>.',
+        'index.col_visibility' => 'Synlighet',
+        'index.visibility_public' => 'PUBLIC',
+        'index.visibility_internal' => 'INTERNAL',
         'index.no_results' => 'Inga skills matchar din sökning.',
         'index.sort_modified_desc' => 'Senast ändrad ↓',
         'index.sort_modified_asc' => 'Senast ändrad ↑',
@@ -125,11 +133,13 @@ function skill_lang_builtin_all(): array {
         'index.js_result_partial' => '{visible} av {total} visas',
         // login
         'login.title' => 'Logga in',
-        'login.prompt' => 'Ange lösenord för att fortsätta',
+        'login.prompt' => 'Ange användarnamn och lösenord',
+        'login.username_label' => 'Användarnamn',
+        'login.username_placeholder' => 'admin',
         'login.password_label' => 'Lösenord',
         'login.password_placeholder' => '••••••••',
         'login.submit' => 'Logga in',
-        'login.error' => 'Fel lösenord. Försök igen.',
+        'login.error' => 'Fel användarnamn eller lösenord.',
         // download_content
         'dlc.err_zip' => 'ZipArchive saknas på servern.',
         'dlc.err_no_content' => 'Content-katalogen saknas.',
@@ -158,6 +168,8 @@ function skill_lang_builtin_all(): array {
         'view.open_binary_blocked' => 'Binärfiler kan inte öppnas i webbläsaren. Ladda ner arkivet istället.',
         'view.entry_not_found' => 'Filen hittades inte i arkivet.',
         'view.entry_open' => 'Öppna fil',
+        'view.access_denied' => 'Du har inte behörighet att se denna skill.',
+        'view.skill_not_found' => 'Skill hittades inte.',
         'view.mermaid_fs_aria' => 'Mermaid helskärm',
         'view.mermaid_tab_diagram' => 'Diagram',
         'view.mermaid_tab_code' => 'Kod',
@@ -293,6 +305,49 @@ function skill_lang_builtin_all(): array {
         'err.could_not_create_skill' => 'Kunde inte skapa .skill-fil.',
         'err.no_allowed_files' => 'Inga filer med tillåtna filändelser kunde packas ({exts}).',
         'err.no_md_txt' => 'Inga filer med tillåtna filändelser kunde packas ({exts}).',
+        // settings
+        'settings.page_title' => 'Inställningar',
+        'settings.logo_sub' => 'Åtkomst & synlighet',
+        'settings.intro' => 'Styr om skills ska vara tillgängliga utan inloggning och hur synlighet (PUBLIC / INTERNAL) hanteras per skill i SKILL.md.',
+        'settings.section_access' => 'Åtkomst',
+        'settings.allow_guest_access' => 'Tillåt gäståtkomst (utan inloggning)',
+        'settings.allow_guest_access_hint' => 'Avmarkera om alla skills ska kräva inloggning för visning och nedladdning.',
+        'settings.use_skill_visibility' => 'Använd visibility i SKILL.md',
+        'settings.use_skill_visibility_hint' => 'När aktiverat döljs skills märkta internal för gäster. Inloggade användare ser alla skills.',
+        'settings.default_visibility' => 'Standard visibility för nya skills',
+        'settings.default_visibility_hint' => 'Används i mallen för nya skills och när visibility saknas i frontmatter.',
+        'settings.visibility_public' => 'PUBLIC — synlig för gäster (om gäståtkomst är på)',
+        'settings.visibility_internal' => 'INTERNAL — endast inloggade användare',
+        'settings.section_frontmatter' => 'Frontmatter i SKILL.md',
+        'settings.frontmatter_help' => 'Sätt visibility per skill i YAML-frontmatter. Värden: public eller internal (gemener rekommenderas).',
+        'settings.config_path' => 'Inställningarna sparas i {path}.',
+        'settings.msg_saved' => 'Inställningarna sparades.',
+        'settings.msg_save_fail' => 'Kunde inte spara inställningarna. Kontrollera skrivrättigheter för config/.',
+        'settings.save_access' => 'Spara åtkomst',
+        'settings.admin_required' => 'Endast administratörer har åtkomst till inställningar.',
+        'settings.section_users' => 'Användare (ACL)',
+        'settings.users_intro' => 'Alla lösenord lagras som bcrypt-hash i config/users.php. Rollen admin kan hantera inställningar och användare; user kan redigera skills.',
+        'settings.user_col_name' => 'Användarnamn',
+        'settings.user_col_manage' => 'Roll, nytt lösenord & åtgärder',
+        'settings.user_col_role' => 'Roll',
+        'settings.user_col_password' => 'Nytt lösenord',
+        'settings.user_col_actions' => 'Åtgärder',
+        'settings.user_password_placeholder' => 'Lämna tomt för oförändrat',
+        'settings.user_you' => 'du',
+        'settings.role_admin' => 'Admin',
+        'settings.role_user' => 'Användare',
+        'settings.add_user' => 'Lägg till användare',
+        'settings.add_user_btn' => 'Lägg till',
+        'settings.user_added' => 'Användaren skapades.',
+        'settings.user_updated' => 'Användaren uppdaterades.',
+        'settings.user_deleted' => 'Användaren raderades.',
+        'settings.user_confirm_delete' => 'Radera användaren {name}?',
+        'settings.user_err_username' => 'Ogiltigt användarnamn (3–32 tecken, börja med bokstav).',
+        'settings.user_err_password_short' => 'Lösenordet måste vara minst 6 tecken.',
+        'settings.user_err_exists' => 'Användarnamnet finns redan.',
+        'settings.user_err_not_found' => 'Användaren hittades inte.',
+        'settings.user_err_last_admin' => 'Minst en administratör måste finnas kvar.',
+        'settings.user_err_delete_self' => 'Du kan inte radera ditt eget konto.',
     ];
 
     $en = [
@@ -306,6 +361,9 @@ function skill_lang_builtin_all(): array {
         'common.logout' => 'Log out',
         'common.login' => 'Log in',
         'common.save' => 'Save',
+        'common.cancel' => 'Cancel',
+        'common.settings' => 'Settings',
+        'common.settings_title' => 'Access and visibility settings',
         'common.close' => 'Close',
         'common.help' => 'Help',
         'common.download' => 'Download',
@@ -342,7 +400,12 @@ function skill_lang_builtin_all(): array {
         'index.dl_as_zip' => 'As .zip',
         'index.confirm_delete' => 'Delete {name}?',
         'index.empty' => 'No .skill files found.',
+        'index.empty_guest_blocked' => 'Login is required to view skills.',
+        'index.empty_guest_login' => '<a href="login.php">Log in</a> to continue.',
         'index.empty_upload' => 'Upload an existing one or <a href="edit/">create a new one</a>.',
+        'index.col_visibility' => 'Visibility',
+        'index.visibility_public' => 'PUBLIC',
+        'index.visibility_internal' => 'INTERNAL',
         'index.no_results' => 'No skills match your search.',
         'index.sort_modified_desc' => 'Last modified ↓',
         'index.sort_modified_asc' => 'Last modified ↑',
@@ -367,11 +430,13 @@ function skill_lang_builtin_all(): array {
         'index.js_result_one' => '1 skill',
         'index.js_result_partial' => '{visible} of {total} shown',
         'login.title' => 'Log in',
-        'login.prompt' => 'Enter password to continue',
+        'login.prompt' => 'Enter username and password',
+        'login.username_label' => 'Username',
+        'login.username_placeholder' => 'admin',
         'login.password_label' => 'Password',
         'login.password_placeholder' => '••••••••',
         'login.submit' => 'Log in',
-        'login.error' => 'Wrong password. Try again.',
+        'login.error' => 'Invalid username or password.',
         'dlc.err_zip' => 'ZipArchive is not available on the server.',
         'dlc.err_no_content' => 'Content directory is missing.',
         'dlc.err_tmp' => 'Could not create temporary file.',
@@ -398,6 +463,8 @@ function skill_lang_builtin_all(): array {
         'view.open_binary_blocked' => 'Binary files cannot be opened in the browser. Download the archive instead.',
         'view.entry_not_found' => 'File not found in archive.',
         'view.entry_open' => 'Open file',
+        'view.access_denied' => 'You do not have permission to view this skill.',
+        'view.skill_not_found' => 'Skill not found.',
         'view.mermaid_fs_aria' => 'Mermaid fullscreen',
         'view.mermaid_tab_diagram' => 'Diagram',
         'view.mermaid_tab_code' => 'Code',
@@ -529,6 +596,48 @@ function skill_lang_builtin_all(): array {
         'err.could_not_create_skill' => 'Could not create .skill file.',
         'err.no_allowed_files' => 'No files with allowed extensions could be packed ({exts}).',
         'err.no_md_txt' => 'No files with allowed extensions could be packed ({exts}).',
+        'settings.page_title' => 'Settings',
+        'settings.logo_sub' => 'Access & visibility',
+        'settings.intro' => 'Control whether skills are available without login and how per-skill visibility (PUBLIC / INTERNAL) in SKILL.md is enforced.',
+        'settings.section_access' => 'Access',
+        'settings.allow_guest_access' => 'Allow guest access (without login)',
+        'settings.allow_guest_access_hint' => 'Uncheck if all skills require login to view or download.',
+        'settings.use_skill_visibility' => 'Use visibility in SKILL.md',
+        'settings.use_skill_visibility_hint' => 'When enabled, skills marked internal are hidden from guests. Logged-in users see all skills.',
+        'settings.default_visibility' => 'Default visibility for new skills',
+        'settings.default_visibility_hint' => 'Used in the new-skill template and when visibility is missing from front matter.',
+        'settings.visibility_public' => 'PUBLIC — visible to guests (when guest access is on)',
+        'settings.visibility_internal' => 'INTERNAL — logged-in users only',
+        'settings.section_frontmatter' => 'Front matter in SKILL.md',
+        'settings.frontmatter_help' => 'Set visibility per skill in YAML front matter. Values: public or internal (lowercase recommended).',
+        'settings.config_path' => 'Settings are stored in {path}.',
+        'settings.msg_saved' => 'Settings saved.',
+        'settings.msg_save_fail' => 'Could not save settings. Check write permissions on config/.',
+        'settings.save_access' => 'Save access',
+        'settings.admin_required' => 'Only administrators can access settings.',
+        'settings.section_users' => 'Users (ACL)',
+        'settings.users_intro' => 'All passwords are stored as bcrypt hashes in config/users.php. The admin role manages settings and users; user can edit skills.',
+        'settings.user_col_name' => 'Username',
+        'settings.user_col_manage' => 'Role, new password & actions',
+        'settings.user_col_role' => 'Role',
+        'settings.user_col_password' => 'New password',
+        'settings.user_col_actions' => 'Actions',
+        'settings.user_password_placeholder' => 'Leave blank to keep current',
+        'settings.user_you' => 'you',
+        'settings.role_admin' => 'Admin',
+        'settings.role_user' => 'User',
+        'settings.add_user' => 'Add user',
+        'settings.add_user_btn' => 'Add',
+        'settings.user_added' => 'User created.',
+        'settings.user_updated' => 'User updated.',
+        'settings.user_deleted' => 'User deleted.',
+        'settings.user_confirm_delete' => 'Delete user {name}?',
+        'settings.user_err_username' => 'Invalid username (3–32 characters, start with a letter).',
+        'settings.user_err_password_short' => 'Password must be at least 6 characters.',
+        'settings.user_err_exists' => 'Username already exists.',
+        'settings.user_err_not_found' => 'User not found.',
+        'settings.user_err_last_admin' => 'At least one administrator must remain.',
+        'settings.user_err_delete_self' => 'You cannot delete your own account.',
     ];
 
     $all = ['sv' => $sv, 'en' => $en];
@@ -583,8 +692,9 @@ function __(string $key, array $ctx = []): string {
 
 /** Standardmall SKILL.md beroende på språk (innehåll i nya skills). */
 function skill_default_skill_md_template(): string {
+    $vis = skill_settings()['default_skill_visibility'] ?? 'public';
     if (skill_locale() === 'en') {
-        return <<<'MD'
+        return <<<MD
 ---
 name:
 title:
@@ -592,6 +702,7 @@ description:
 author:
 version: 1.0.0
 tags:
+visibility: {$vis}
 ---
 
 # New skill
@@ -613,7 +724,7 @@ Describe what this skill does and when to use it.
 MD;
     }
 
-    return <<<'MD'
+    return <<<MD
 ---
 name:
 title:
@@ -621,6 +732,7 @@ description:
 author:
 version: 1.0.0
 tags:
+visibility: {$vis}
 ---
 
 # Ny skill

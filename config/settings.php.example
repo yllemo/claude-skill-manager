@@ -1,0 +1,17 @@
+<?php
+// Skyddas från direkt HTTP-åtkomst
+if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) === __FILE__) {
+    http_response_code(403);
+    exit;
+}
+
+/**
+ * Kopiera till settings.php och anpassa åtkomst.
+ */
+return [
+
+    'allow_guest_access' => true,
+    'use_skill_visibility' => true,
+    'default_skill_visibility' => 'public',
+
+];

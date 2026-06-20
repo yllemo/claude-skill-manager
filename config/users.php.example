@@ -1,0 +1,23 @@
+<?php
+// Skyddas från direkt HTTP-åtkomst
+if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) === __FILE__) {
+    http_response_code(403);
+    exit;
+}
+
+/**
+ * Användarkonton (ACL). Lösenord lagras endast som bcrypt-hash.
+ * Filen skapas automatiskt vid första inloggning om den saknas (admin + lösenord från config.php).
+ *
+ * Roller:
+ *   admin — inställningar, användarhantering, alla skills
+ *   user  — redigera/visa skills (ej inställningar)
+ */
+return [
+    'users' => [
+        'admin' => [
+            'password' => '$2y$10$REPLACE_WITH_password_hash_GENERATED_BY_APP',
+            'role' => 'admin',
+        ],
+    ],
+];

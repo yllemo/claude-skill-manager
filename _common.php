@@ -13,7 +13,7 @@ define('APP_NAME', 'Skill Manager');
 function skill_files_config_defaults(): array {
     return [
         'allowed_extensions' => [
-            'md', 'mdx', 'txt', 'rst', 'csv', 'tsv', 'json', 'jsonl', 'ndjson', 'xml', 'bpmn', 'yml', 'yaml', 'toml', 'sef',
+            'md', 'mdx', 'txt', 'rst', 'csv', 'tsv', 'json', 'jsonl', 'ndjson', 'xml', 'bpmn', 'yml', 'yaml', 'toml', 'sef', 'ac',
             'html', 'htm', 'svg', 'css', 'scss', 'less',
             'js', 'mjs', 'cjs', 'ts', 'jsx', 'tsx', 'vue', 'svelte',
             'py', 'rb', 'php', 'go', 'rs', 'java', 'kt', 'cs', 'lua', 'r', 'sql', 'sh', 'bash', 'ps1',
@@ -22,7 +22,7 @@ function skill_files_config_defaults(): array {
             'png', 'jpg', 'jpeg', 'gif', 'webp',
         ],
         'text_extensions' => [
-            'md', 'mdx', 'txt', 'rst', 'csv', 'tsv', 'json', 'jsonl', 'ndjson', 'xml', 'bpmn', 'yml', 'yaml', 'toml', 'sef',
+            'md', 'mdx', 'txt', 'rst', 'csv', 'tsv', 'json', 'jsonl', 'ndjson', 'xml', 'bpmn', 'yml', 'yaml', 'toml', 'sef', 'ac',
             'html', 'htm', 'svg', 'css', 'scss', 'less',
             'js', 'mjs', 'cjs', 'ts', 'jsx', 'tsx', 'vue', 'svelte',
             'py', 'rb', 'php', 'go', 'rs', 'java', 'kt', 'cs', 'lua', 'r', 'sql', 'sh', 'bash', 'ps1',
@@ -36,6 +36,7 @@ function skill_files_config_defaults(): array {
             'json' => 'application/json', 'jsonl' => 'application/json', 'ndjson' => 'application/x-ndjson',
             'xml' => 'application/xml', 'bpmn' => 'application/bpmn+xml', 'yml' => 'text/yaml', 'yaml' => 'text/yaml', 'toml' => 'application/toml',
             'sef' => 'application/vnd.smart-exam',
+            'ac'  => 'application/vnd.archicode',
             'html' => 'text/html', 'htm' => 'text/html', 'svg' => 'image/svg+xml',
             'js' => 'text/javascript', 'css' => 'text/css', 'py' => 'text/x-python', 'sql' => 'application/sql',
             'php' => 'application/x-php', 'sh' => 'text/x-shellscript', 'bash' => 'text/x-shellscript',
@@ -96,6 +97,164 @@ function skill_allowed_exts_label(): string {
     $exts = skill_allowed_extensions();
     sort($exts);
     return implode(', ', array_map(static fn(string $e): string => '.' . $e, $exts));
+}
+
+/* ── INSTÄLLNINGAR (config/settings.php) ─────────────── */
+
+/** @return array<string, mixed> */
+function skill_settings_defaults(): array {
+    return [
+        'allow_guest_access'       => true,
+        'use_skill_visibility'     => true,
+        'default_skill_visibility' => 'public',
+    ];
+}
+
+/** @return array<string, mixed> */
+function skill_settings(): array {
+    static $cfg = null;
+    static $mtime = null;
+    $f = __DIR__ . '/config/settings.php';
+    $fileMtime = is_file($f) ? (int)filemtime($f) : 0;
+    if ($cfg === null || $mtime !== $fileMtime) {
+        $defaults = skill_settings_defaults();
+        $cfg = file_exists($f)
+            ? array_replace($defaults, (array)(require $f))
+            : $defaults;
+        $cfg['allow_guest_access'] = (bool)($cfg['allow_guest_access'] ?? true);
+        $cfg['use_skill_visibility'] = (bool)($cfg['use_skill_visibility'] ?? true);
+        $cfg['default_skill_visibility'] = skill_normalize_visibility(
+            (string)($cfg['default_skill_visibility'] ?? 'public')
+        );
+        $mtime = $fileMtime;
+    }
+    return $cfg;
+}
+
+function skill_normalize_visibility(string $value): string {
+    $v = strtolower(trim($value));
+    return $v === 'internal' ? 'internal' : 'public';
+}
+
+/** visibility från SKILL.md meta (public | internal). */
+function skill_skill_visibility(array $meta): string {
+    $raw = strtolower(trim((string)($meta['visibility'] ?? '')));
+    if ($raw === 'internal' || $raw === 'public') {
+        return $raw;
+    }
+    return skill_settings()['default_skill_visibility'];
+}
+
+function skill_public_access_enabled(): bool {
+    return (bool)skill_settings()['allow_guest_access'];
+}
+
+function skill_use_skill_visibility(): bool {
+    return (bool)skill_settings()['use_skill_visibility'];
+}
+
+function skill_is_authed_safe(): bool {
+    return function_exists('skill_is_authed') && skill_is_authed();
+}
+
+/** Får användaren se denna skill (lista, view, download)? */
+function skill_user_can_view_skill(array $meta, ?bool $isAuthed = null): bool {
+    $isAuthed ??= skill_is_authed_safe();
+    if ($isAuthed) {
+        return true;
+    }
+    if (!skill_public_access_enabled()) {
+        return false;
+    }
+    if (!skill_use_skill_visibility()) {
+        return true;
+    }
+    return skill_skill_visibility($meta) === 'public';
+}
+
+function skill_user_can_view_file(string $skillBasename, ?bool $isAuthed = null): bool {
+    $path = validate_file_param($skillBasename);
+    if (!$path) {
+        return false;
+    }
+    return skill_user_can_view_skill(get_skill_meta($path), $isAuthed);
+}
+
+/** @param list<array{filename:string,meta:array,...}> $skills */
+function skill_filter_skills_for_user(array $skills, ?bool $isAuthed = null): array {
+    $isAuthed ??= skill_is_authed_safe();
+    return array_values(array_filter(
+        $skills,
+        static fn(array $s): bool => skill_user_can_view_skill($s['meta'] ?? [], $isAuthed)
+    ));
+}
+
+function skill_get_skills_for_user(?bool $isAuthed = null): array {
+    return skill_filter_skills_for_user(get_skills(), $isAuthed);
+}
+
+/**
+ * Kräver åtkomst till en skill; omdirigerar till login eller 403.
+ */
+function skill_require_skill_view(string $skillBasename, string $loginPath = '../login.php'): void {
+    if (!validate_file_param($skillBasename)) {
+        http_response_code(404);
+        echo __('view.skill_not_found');
+        exit;
+    }
+    if (skill_user_can_view_file($skillBasename)) {
+        return;
+    }
+    if (!skill_is_authed_safe()) {
+        $back = urlencode($_SERVER['REQUEST_URI'] ?? '/');
+        header('Location: ' . $loginPath . '?back=' . $back);
+        exit;
+    }
+    http_response_code(403);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo __('view.access_denied');
+    exit;
+}
+
+/** Skriver PHP-config (return-array) till disk. */
+function skill_write_php_config(string $absolutePath, array $data): bool {
+    $body = var_export($data, true);
+    $php  = "<?php\n";
+    $php .= "// Skyddas från direkt HTTP-åtkomst\n";
+    $php .= "if (isset(\$_SERVER['SCRIPT_FILENAME']) && realpath(\$_SERVER['SCRIPT_FILENAME']) === __FILE__) {\n";
+    $php .= "    http_response_code(403);\n";
+    $php .= "    exit;\n";
+    $php .= "}\n\nreturn " . $body . ";\n";
+    $dir = dirname($absolutePath);
+    if (!is_dir($dir)) {
+        return false;
+    }
+    return file_put_contents($absolutePath, $php, LOCK_EX) !== false;
+}
+
+/** @param array<string, mixed> $input POST/validated values */
+function skill_save_settings(array $input): bool {
+    $data = [
+        'allow_guest_access'       => !empty($input['allow_guest_access']),
+        'use_skill_visibility'     => !empty($input['use_skill_visibility']),
+        'default_skill_visibility' => skill_normalize_visibility((string)($input['default_skill_visibility'] ?? 'public')),
+    ];
+    return skill_write_php_config(__DIR__ . '/config/settings.php', $data);
+}
+
+/** Inställningsknapp i header (endast admin). */
+function skill_render_settings_button(string $hrefPrefix = '', bool $iconOnly = false): void {
+    if (!function_exists('skill_is_admin') || !skill_is_admin()) {
+        return;
+    }
+    $href  = $hrefPrefix . 'settings/';
+    $title = h(__('common.settings_title'));
+    $label = h(__('common.settings'));
+    if ($iconOnly) {
+        echo '<a href="' . h($href) . '" class="hdr-icon-btn" title="' . $title . '" aria-label="' . $label . '">⚙️</a>';
+        return;
+    }
+    echo '<a href="' . h($href) . '" class="btn btn-white btn-sm" title="' . $title . '">⚙️ ' . $label . '</a>';
 }
 
 /* ── HELPERS ────────────────────────────────────────── */
@@ -629,8 +788,10 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;colo
 .btn-teal:hover{opacity:.88}
 .btn-danger{background:var(--red);color:#fff}
 .btn-danger:hover{opacity:.88}
-.theme-btn{width:32px;height:32px;border-radius:var(--r);background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.28);color:#fff;font-size:.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.theme-btn{width:32px;height:32px;border-radius:var(--r);background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.28);color:#fff;font-size:.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;text-decoration:none;flex-shrink:0;padding:0}
 .theme-btn:hover{background:rgba(255,255,255,.22)}
+.hdr-icon-btn{width:32px;height:32px;border-radius:var(--r);background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.28);color:#fff;font-size:.95rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:background .15s;text-decoration:none;flex-shrink:0;padding:0;line-height:1}
+.hdr-icon-btn:hover{background:rgba(255,255,255,.22)}
 
 /* MARKDOWN */
 .md{max-width:800px}
@@ -677,8 +838,10 @@ footer{background:var(--bg-footer);border-top:1px solid var(--border-l);padding:
   .hdr-sep{display:none}
   .hdr-actions .btn{padding:4px 8px;font-size:.72rem}
   .hdr-actions .theme-btn{width:28px;height:28px;font-size:.85rem}
+  .hdr-actions .hdr-icon-btn{width:28px;height:28px;font-size:.85rem}
   .hdr-actions .btn:not(.hamburger-btn):not(.sidebar-toggle){display:none!important}
   .hdr-actions .theme-btn{display:none!important}
+  .hdr-actions .hdr-icon-btn{display:none!important}
   .header{padding:0 12px;gap:8px}
   .logo-text{font-size:.8rem}
   .hdr-title{font-size:.76rem}

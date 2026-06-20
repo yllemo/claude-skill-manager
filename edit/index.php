@@ -275,6 +275,7 @@ html,body{height:100%;overflow:hidden}
   <div class="hdr-sep"></div>
   <div class="hdr-title"><?= h($pageTitle) ?></div>
   <div class="hdr-actions">
+    <?php skill_render_settings_button('../'); ?>
     <a href="<?= h($switchToAiUrl) ?>" class="btn btn-sm btn-teal btn-switch-mode" title="<?= h($isNew ? __('edit.switch_ai_title_new') : __('edit.switch_ai_title')) ?>">🤖 <?= h(__('edit.switch_ai')) ?></a>
     <?php if (!$isNew): ?>
     <a href="../view/?file=<?= urlencode($filename) ?>" class="btn btn-white btn-sm">👁 <?= h(__('common.view')) ?></a>
@@ -572,7 +573,7 @@ function getLang(filename) {
   var ext = (filename.split('.').pop() || '').toLowerCase();
   return {
     md:'markdown', mdx:'markdown', markdown:'markdown', txt:'plaintext', rst:'plaintext',
-    csv:'plaintext', tsv:'plaintext', json:'json', jsonl:'json', ndjson:'json', sef:'json',
+    csv:'plaintext', tsv:'plaintext', json:'json', jsonl:'json', ndjson:'json', sef:'json', ac:'json',
     yml:'yaml', yaml:'yaml', toml:'ini', xml:'xml', bpmn:'xml', svg:'xml',
     html:'html', htm:'html', css:'css', scss:'scss', less:'css',
     js:'javascript', mjs:'javascript', cjs:'javascript', ts:'typescript', jsx:'javascript', tsx:'typescript',
@@ -892,7 +893,7 @@ function renderNode(node, depth, wrap, active, pathCount) {
 function indent(d) { return '<span class="tree-indent" style="width:' + (d*13) + 'px"></span>'; }
 function fIcon(name) {
   var ext = (name.split('.').pop() || '').toLowerCase();
-  return {md:'📄',mdx:'📄',txt:'📝',rst:'📝',csv:'📊',tsv:'📊',json:'📋',jsonl:'📋',sef:'📋',yml:'⚙️',yaml:'⚙️',toml:'⚙️',xml:'📰',bpmn:'📰',js:'📜',ts:'📜',py:'🐍',rb:'💎',php:'🐘',sql:'🗃️',sh:'🖥️',css:'🎨',html:'🌐',svg:'🖼️',vue:'💚'}[ext] || '📎';
+  return {md:'📄',mdx:'📄',txt:'📝',rst:'📝',csv:'📊',tsv:'📊',json:'📋',jsonl:'📋',sef:'📋',ac:'📐',yml:'⚙️',yaml:'⚙️',toml:'⚙️',xml:'📰',bpmn:'📰',js:'📜',ts:'📜',py:'🐍',rb:'💎',php:'🐘',sql:'🗃️',sh:'🖥️',css:'🎨',html:'🌐',svg:'🖼️',vue:'💚'}[ext] || '📎';
 }
 
 // ── GET ALL PATHS (models + unopened edits) ────────────

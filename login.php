@@ -3,7 +3,6 @@ declare(strict_types=1);
 require_once __DIR__ . '/_auth.php';
 require_once __DIR__ . '/_common.php';
 
-// Redan inloggad → gå till startsidan
 if (skill_is_authed()) {
     header('Location: ./');
     exit;
@@ -13,9 +12,11 @@ $error = '';
 $back  = preg_replace('/[^\w\-\/\.\?\=\&\%]/', '', $_GET['back'] ?? '');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $password = $_POST['password'] ?? '';
-    if (skill_try_login($password)) {
-        skill_login();
+    $username = (string)($_POST['username'] ?? '');
+    $password = (string)($_POST['password'] ?? '');
+    $back     = preg_replace('/[^\w\-\/\.\?\=\&\%]/', '', (string)($_POST['back'] ?? ''));
+    if (skill_try_login($username, $password)) {
+        skill_login($username);
         $redirect = $back ?: './';
         header('Location: ' . $redirect);
         exit;
@@ -157,8 +158,13 @@ body{justify-content:center;align-items:center}
     <input type="hidden" name="back" value="<?= h($back) ?>">
     <?php endif; ?>
     <div class="login-field">
+      <label><?= h(__('login.username_label')) ?></label>
+      <input type="text" name="username" value="<?= h($_POST['username'] ?? 'admin') ?>" autofocus autocomplete="username"
+             placeholder="<?= h(__('login.username_placeholder')) ?>" required pattern="[A-Za-z][A-Za-z0-9_\-]{2,31}">
+    </div>
+    <div class="login-field" style="margin-top:14px">
       <label><?= h(__('login.password_label')) ?></label>
-      <input type="password" name="password" autofocus autocomplete="current-password"
+      <input type="password" name="password" autocomplete="current-password"
              placeholder="<?= h(__('login.password_placeholder')) ?>" required>
     </div>
     <div style="margin-top:16px">
