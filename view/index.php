@@ -329,6 +329,8 @@ html,body{height:100%;overflow:hidden}
     <?php else: ?>
     <a href="../login.php?back=<?= urlencode($loginBack) ?>" class="btn btn-white btn-sm">🔐 <?= h(__('common.login')) ?></a>
     <?php endif; ?>
+    <?php skill_render_canvas_button($filename); ?>
+    <?php skill_render_chat_button($filename); ?>
     <details class="hdr-split-dl" id="hdr-split-dl">
       <summary class="btn btn-white btn-sm hdr-split-btn" aria-label="<?= h(__('view.download_aria')) ?>">⬇ <?= h(__('view.download_btn')) ?></summary>
       <div class="hdr-split-menu" role="menu">
@@ -379,6 +381,18 @@ html,body{height:100%;overflow:hidden}
     <a href="../login.php?back=<?= urlencode($loginBack) ?>" class="mobile-nav-item">
       <span class="icon">🔐</span>
       <span><?= h(__('common.login')) ?></span>
+    </a>
+    <?php endif; ?>
+    <?php $canvasUrl = skill_canvas_url_for_skill($filename); if ($canvasUrl !== null): ?>
+    <a href="<?= h($canvasUrl) ?>" class="mobile-nav-item" target="_blank" rel="noopener noreferrer">
+      <span class="icon">🖼</span>
+      <span><?= h(__('view.canvas_btn')) ?></span>
+    </a>
+    <?php endif; ?>
+    <?php $chatUrl = skill_chat_url_for_skill($filename); if ($chatUrl !== null): ?>
+    <a href="<?= h($chatUrl) ?>" class="mobile-nav-item" target="_blank" rel="noopener noreferrer">
+      <span class="icon">💬</span>
+      <span><?= h(__('view.chat_btn')) ?></span>
     </a>
     <?php endif; ?>
   </div>

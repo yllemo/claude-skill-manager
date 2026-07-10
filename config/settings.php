@@ -16,4 +16,10 @@ return [
     // Standard för nya skills och när visibility saknas i frontmatter: public | internal
     'default_skill_visibility' => 'public',
 
+    // {skill_url} = t.ex. https://skill.yllemo.se/s/filnamn.skill
+    'skill_canvas_url' => 'https://canvas.yllemo.se/?file={skill_url}',
+
+    // Publik bas-URL för fil-länkar (Skill Canvas m.fl.). Tom = auto.
+    'skill_file_base_url' => 'https://skill.yllemo.se',
+
 ];

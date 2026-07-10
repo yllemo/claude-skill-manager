@@ -10,6 +10,9 @@ A professional PHP-based web application for creating, editing, and managing `.s
 
 ## 🚀 Latest Updates
 
+- 🖼️ **Skill Canvas** — Open a skill on an external whiteboard from the viewer; URL template in `config/settings.php` (`skill_canvas_url`)
+- 💬 **SKILL Chat** — `chat.html` loads a skill via `?file=` and chats against its contents; button in the viewer (new tab)
+- 🔗 **Public skill URLs** — Short shareable links at `/s/name.skill` for external tools (Skill Canvas, Chat); `/content/` blocked from direct HTTP access
 - 👥 **Multi-user ACL** — User accounts in `config/users.php` (bcrypt passwords); roles `admin` and `user`
 - ⚙️ **Settings page** — Guest access, per-skill visibility (`PUBLIC` / `INTERNAL`), and user management (admin only)
 - 📁 **Configurable file types** — Allowed extensions and MIME types in `config/files.php` (`.sef`, `.ac`, `.csv`, code, images, and more)
@@ -44,6 +47,7 @@ A professional PHP-based web application for creating, editing, and managing `.s
 - 🌐 **Public Viewing** — Share skills publicly while keeping editing secure
 - ⚡ **Performance Optimized** — Fast loading and efficient file handling
 - 🧩 **MCP Integration** — JSON-RPC endpoint for AI client integration
+- 🖼️ **Skill Canvas & Chat** — External whiteboard link and local `chat.html` from the viewer, both using the same public `/s/…` skill URL
 - 🌐 **Localization** — Built-in Swedish (`sv`) and English (`en`); switch UI language in `config/lang.php`
 
 ## 💡 Why Use Claude Skill Manager?
@@ -61,8 +65,9 @@ skill/
 ├── index.php           # Dashboard — searchable skill library with upload
 ├── login.php           # Login (username + password)
 ├── logout.php          # Logout handler
-├── download.php        # Serves downloads as .skill or .zip (filename extension option)
+├── download.php        # Download .skill/.zip; inline mode via ?inline=1
 ├── download_content.php # Bulk content download (requires authentication)
+├── chat.html           # Standalone chat UI — load skill from ?file= URL
 ├── favicon.ico         # Custom favicon for the application
 ├── _common.php         # Shared functions, CSS and helpers
 ├── _lang.php           # UI translations (built-in sv/en) and __( ) helper
@@ -90,11 +95,15 @@ skill/
 ├── mcp/
 │   ├── index.php       # MCP JSON-RPC endpoint
 │   └── test.php        # MCP web test panel
+├── s/
+│   ├── index.php       # Public inline .skill URL (/s/name.skill)
+│   └── .htaccess       # Rewrite + disable gzip for zip serving
 ├── view/
 │   └── index.php       # Skill viewer — file tree, render markdown
 ├── edit/
 │   └── index.php       # Create/edit skills — Monaco editor
-├── content/            # Storage for .skill files (web server writable)
+├── content/            # Storage for .skill files (writable; direct HTTP blocked)
+│   └── .htaccess       # Deny direct access — use /s/ or download.php
 └── skill-intro.md      # Help text about .skill format (shown via ? button)
 ```
 
@@ -131,6 +140,8 @@ skill/
 - Toggle between rendered view and raw text (for `.md` in the main panel)
 - Copy button for file contents
 - Edit button shown only when authenticated (guests see Login button instead)
+- **Skill Canvas** button (new tab) when `skill_canvas_url` is set in `config/settings.php`
+- **Chat** button (new tab) opens `chat.html?file=…` with the same public skill URL
 - **Settings** button (admin only, header / mobile menu)
 - Download button includes format dropdown (`.skill` / `.zip`)
 - **Print-friendly** — Optimized printing with clean layout (hides navigation, headers, etc.)
@@ -160,6 +171,13 @@ skill/
 - Seamless switching between AI and Monaco editor modes
 - All traditional editing features (file management, templates, etc.)
 - AI provider settings with model selection and temperature control
+
+### 💬 SKILL Chat (`/chat.html`)
+**Standalone chat against skill content (opens from viewer or directly).**
+- Load a `.skill` archive from `?file=` — absolute URL to `/s/name.skill` (same format as Skill Canvas)
+- Example: `chat.html?file=https%3A%2F%2Fskill.example.se%2Fs%2Fmy-skill.skill`
+- Select which text files to include as context; chat via Ollama, LM Studio, or OpenAI (browser or server)
+- Built-in skill templates and export chat as Markdown
 
 ### ⚙️ Settings (`/settings/`)
 **Requires admin login.**
@@ -304,6 +322,20 @@ Edit `config/settings.php` for **access control**:
 | `allow_guest_access` | If `false`, all viewing/downloading requires login |
 | `use_skill_visibility` | If `true`, guests only see skills with `visibility: public` in SKILL.md |
 | `default_skill_visibility` | `public` or `internal` — used in new-skill template and when frontmatter omits `visibility` |
+| `skill_canvas_url` | Skill Canvas link template; `{skill_url}` = URL-encoded public `/s/…` URL. Empty = hide Canvas button |
+| `skill_file_base_url` | Public base URL (e.g. `https://skill.example.se`) for `/s/` and Canvas links. Empty = auto-detect from request |
+
+**Public skill file URLs** (for Skill Canvas, Chat, and other tools):
+
+| URL | Purpose |
+|-----|---------|
+| `/s/my-skill.skill` | Short inline URL — serves the zip without exposing `/content/` |
+| `/download.php?file=my-skill.skill` | Download as attachment (`.skill` or `&ext=zip`) |
+| `/download.php?file=my-skill.skill&inline=1` | Same inline serve as `/s/` |
+
+External tools need **guest access** and **`visibility: public`** on the skill (or they receive `401`/`403` instead of zip data).
+
+**Nginx** (if not using Apache): route `/s/*.skill` to `/s/index.php` (see `s/.htaccess` for Apache equivalent).
 
 Edit `config/users.php` for **user accounts** (normally managed via `/settings/`):
 
@@ -362,7 +394,7 @@ Edit `config/key.env` for sensitive configuration:
 
 - **Production deployment**: Use HTTPS and strong passwords (minimum 6 characters)
 - **File permissions**: Ensure `/content/` is writable; `/config/` must be writable only if using the settings UI to save users/settings
-- **Web server config**: Block direct HTTP access to `/config/` (`.htaccess` included for Apache)
+- **Web server config**: Block direct HTTP access to `/config/` (`.htaccess` included for Apache) and `/content/` (`.htaccess` denies direct file access)
 - **Passwords**: Stored as bcrypt hashes in `config/users.php` — not in `config.php`
 - **Roles**: Only `admin` users can open `/settings/` and manage accounts
 
@@ -374,8 +406,9 @@ Edit `config/key.env` for sensitive configuration:
 4. **Edit existing skills:** Click "Edit" next to any skill in the dashboard
 5. **View skills:** `/view/?file=skillname.skill` (subject to access settings)
 6. **Link to a file inside a skill:** `/view/?file=skillname.skill&path=references/guide.html`
-7. **Upload skills:** Drag and drop `.skill` or `.zip` onto the dashboard (entries must match `allowed_extensions`)
-8. **Organize with tags:** Use frontmatter tags for easy filtering and searching
+7. **Skill Canvas / Chat:** Use the buttons in the viewer, or share `https://your-host/s/skillname.skill` with external tools
+8. **Upload skills:** Drag and drop `.skill` or `.zip` onto the dashboard (entries must match `allowed_extensions`)
+9. **Organize with tags:** Use frontmatter tags for easy filtering and searching
 
 ## 🔧 Troubleshooting
 
@@ -387,6 +420,8 @@ Edit `config/key.env` for sensitive configuration:
 - **Styles not loading**: Check that all files were uploaded and web server can serve static files
 - **Upload rejected for a file type**: Add the extension to `allowed_extensions` in `config/files.php`
 - **"File not found in archive"** on a direct link: Use the path as stored in the ZIP (e.g. `docs/test.html`, not `/docs/test.html`)
+- **Skill Canvas / Chat: "not a zip file"** — Response is probably HTML or an error page. Verify with `curl -s https://your-host/s/name.skill | xxd | head -1` (should start with `504b` = `PK`). Ensure the skill is public and guest access is enabled
+- **`/s/name.skill` returns 404** — On Nginx, add a rewrite to `s/index.php`; Apache uses `s/.htaccess`
 
 **Need Help?** Open an issue on GitHub with your PHP version and error details.
 
@@ -445,7 +480,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 This is an **active project** currently in production use. We're continuously improving the codebase and adding new features based on user feedback.
 
 **Current Status:** Stable ✅  
-**Version:** 1.0+  
+**Version:** 1.3.0  
 **Maintenance:** Active development  
 
 ## 🗺️ Roadmap

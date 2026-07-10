@@ -14,4 +14,11 @@ return [
     'use_skill_visibility' => true,
     'default_skill_visibility' => 'public',
 
+    // Skill Canvas — tom sträng = ingen knapp i viewer.
+    // {skill_url} = URL-kodad absolut URL, t.ex. https://skill.example/s/filnamn.skill
+    'skill_canvas_url' => 'https://canvas.yllemo.se/?file={skill_url}',
+
+    // Valfri publik bas-URL (t.ex. https://skill.yllemo.se). Tom = auto från request.
+    'skill_file_base_url' => 'https://skill.yllemo.se',
+
 ];

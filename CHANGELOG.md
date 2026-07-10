@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-07-10
+
+### Added
+- **Skill Canvas integration** — Viewer button opens an external whiteboard with `?file=` pointing to the current skill; configured via `skill_canvas_url` and optional `skill_file_base_url` in `config/settings.php`
+- **SKILL Chat (`chat.html`)** — Standalone chat UI against skill archive content; viewer **Chat** button opens `chat.html?file=…` in a new tab with the same public skill URL as Canvas
+- **Public skill URLs (`/s/`)** — Short inline URLs (`/s/name.skill`) for external tools without exposing `/content/`; `s/index.php` + `s/.htaccess` (Apache rewrite)
+- **`download.php` inline mode** — `?inline=1` serves zip inline with CORS for Skill Canvas; `401`/`403` plain-text errors instead of login redirect for API-style fetches
+- **`content/.htaccess`** — Blocks direct HTTP access to files in `/content/`; use `/s/` or `download.php` instead
+- **Multi-user ACL** — `config/users.php` with bcrypt passwords; roles `admin` and `user`; user CRUD in `/settings/`
+- **Settings page (`/settings/`)** — Guest access, per-skill `visibility` enforcement, default visibility, user management (admin only)
+- **Configurable file types** — `config/files.php` for allowed extensions, text types, images, and MIME types (includes `.sef`, `.ac`, BPMN, and more)
+- **Per-skill visibility** — `visibility: public|internal` in SKILL.md frontmatter; visibility column on dashboard when logged in
+
+### Changed
+- **Viewer** — Direct query-string URLs for archive files (`/view/?file=…&path=…`); Monaco preview only for `.md`; Skill Canvas and Chat buttons in header and mobile menu
+- **Access control** — View, download, index, and MCP respect guest access and skill visibility
+- **Login** — Username + password (default `admin`); legacy `config.php` password migrates to `users.php` on first login
+- **Download serving** — Clean binary output (`fpassthru`, output buffer flush); CORS headers for configured Canvas origin
+
+### Fixed
+- **Skill Canvas zip load failure** — PHP warning from broken `preg_match` delimiter in `skill_canvas_origin()` no longer prepends text before zip bytes
+- **Inline download auth** — External fetches no longer receive HTML login page when access is denied
+
+### Security
+- Direct `/content/` access denied via `.htaccess`
+- Passwords stored as bcrypt hashes in `users.php`; settings UI preserves `skill_canvas_url` when saving access options
+
 ## [1.2.2] - 2026-04-09
 
 ### Added

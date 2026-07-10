@@ -107,6 +107,8 @@ function skill_settings_defaults(): array {
         'allow_guest_access'       => true,
         'use_skill_visibility'     => true,
         'default_skill_visibility' => 'public',
+        'skill_canvas_url'         => '',
+        'skill_file_base_url'      => '',
     ];
 }
 
@@ -126,6 +128,8 @@ function skill_settings(): array {
         $cfg['default_skill_visibility'] = skill_normalize_visibility(
             (string)($cfg['default_skill_visibility'] ?? 'public')
         );
+        $cfg['skill_canvas_url'] = trim((string)($cfg['skill_canvas_url'] ?? ''));
+        $cfg['skill_file_base_url'] = rtrim(trim((string)($cfg['skill_file_base_url'] ?? '')), '/');
         $mtime = $fileMtime;
     }
     return $cfg;
@@ -234,12 +238,233 @@ function skill_write_php_config(string $absolutePath, array $data): bool {
 
 /** @param array<string, mixed> $input POST/validated values */
 function skill_save_settings(array $input): bool {
+    $existing = skill_settings();
     $data = [
         'allow_guest_access'       => !empty($input['allow_guest_access']),
         'use_skill_visibility'     => !empty($input['use_skill_visibility']),
         'default_skill_visibility' => skill_normalize_visibility((string)($input['default_skill_visibility'] ?? 'public')),
+        'skill_canvas_url'         => trim((string)($existing['skill_canvas_url'] ?? '')),
+        'skill_file_base_url'      => rtrim(trim((string)($existing['skill_file_base_url'] ?? '')), '/'),
     ];
     return skill_write_php_config(__DIR__ . '/config/settings.php', $data);
+}
+
+/** Webbrot till appen (t.ex. "" eller "/skill"). */
+function skill_app_web_root(): string {
+    static $root = null;
+    if ($root !== null) {
+        return $root;
+    }
+    $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/index.php');
+    $dir    = dirname($script);
+    if (preg_match('#/(view|edit|ai|settings|mcp)$#', $dir)) {
+        $dir = dirname($dir);
+    }
+    $root = ($dir === '/' || $dir === '\\' || $dir === '.') ? '' : rtrim($dir, '/');
+    return $root;
+}
+
+/** Absolut bas-URL till appen (utan avslutande slash). */
+function skill_app_base_url(): string {
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+    $scheme = $https ? 'https' : 'http';
+    $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $root   = skill_app_web_root();
+    return $scheme . '://' . $host . $root;
+}
+
+/** Publik bas-URL (för delbara fil-länkar). Tom = auto från request. */
+function skill_public_base_url(): string {
+    $configured = trim((string)(skill_settings()['skill_file_base_url'] ?? ''));
+    if ($configured !== '') {
+        return rtrim($configured, '/');
+    }
+    return skill_app_base_url();
+}
+
+/** Origin till Skill Canvas (t.ex. https://canvas.yllemo.se), eller null. */
+function skill_canvas_origin(): ?string {
+    $template = trim((string)(skill_settings()['skill_canvas_url'] ?? ''));
+    if ($template === '' || !preg_match('~^(https?://[^/?#]+)~i', $template, $m)) {
+        return null;
+    }
+    return $m[1];
+}
+
+/** CORS för inline-nedladdning (Skill Canvas m.fl.). */
+function skill_download_send_cors_headers(): void {
+    $allowed = skill_canvas_origin();
+    if ($allowed === null) {
+        return;
+    }
+    $origin = (string)($_SERVER['HTTP_ORIGIN'] ?? '');
+    if ($origin !== '' && strcasecmp($origin, $allowed) === 0) {
+        header('Access-Control-Allow-Origin: ' . $origin);
+    } else {
+        header('Access-Control-Allow-Origin: ' . $allowed);
+    }
+    header('Access-Control-Allow-Methods: GET, HEAD, OPTIONS');
+    header('Access-Control-Expose-Headers: Content-Length, Content-Type');
+    header('Vary: Origin');
+}
+
+/** Filnamn från /s/markitdown.skill (fungerar även utan Apache rewrite). */
+function skill_resolve_skill_filename_from_request(): string {
+    $file = basename((string)($_GET['file'] ?? ''));
+    if (preg_match('/^[a-zA-Z0-9_\-]+\.skill$/', $file)) {
+        return $file;
+    }
+    foreach (['REQUEST_URI', 'REDIRECT_URL', 'ORIG_PATH_INFO'] as $key) {
+        $uri = (string)($_SERVER[$key] ?? '');
+        if (preg_match('#/s/([a-zA-Z0-9_\-]+\.skill)(?:\?|$)#', $uri, $m)) {
+            return $m[1];
+        }
+    }
+    $pathInfo = (string)($_SERVER['PATH_INFO'] ?? '');
+    if (preg_match('#/([a-zA-Z0-9_\-]+\.skill)$#', $pathInfo, $m)) {
+        return $m[1];
+    }
+    return '';
+}
+
+/** Skickar .skill-zip som ren binär (inga buffertar/HTML före eller efter). */
+function skill_send_skill_binary(string $diskPath, string $downloadName, bool $inline): void {
+    @ini_set('display_errors', '0');
+
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
+        skill_download_send_cors_headers();
+        http_response_code(204);
+        exit;
+    }
+
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+
+    if (!is_readable($diskPath)) {
+        http_response_code(500);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo 'File not readable';
+        exit;
+    }
+
+    $size = filesize($diskPath);
+    if ($size === false) {
+        http_response_code(500);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo 'File size error';
+        exit;
+    }
+
+    header('Content-Type: application/zip');
+    header('Content-Length: ' . (string)$size);
+    header('Cache-Control: public, max-age=300');
+    header('Accept-Ranges: bytes');
+    header('X-Content-Type-Options: nosniff');
+
+    $safeName = str_replace(['"', '\\'], '', $downloadName);
+    if ($inline) {
+        skill_download_send_cors_headers();
+        header('Content-Disposition: inline; filename="' . $safeName . '"');
+    } else {
+        header('Content-Disposition: attachment; filename="' . $safeName . '"');
+    }
+
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'HEAD') {
+        exit;
+    }
+
+    $fh = fopen($diskPath, 'rb');
+    if ($fh === false) {
+        http_response_code(500);
+        exit;
+    }
+    fpassthru($fh);
+    fclose($fh);
+    exit;
+}
+
+/** Fel svar för inline/API (aldrig HTML-redirect). */
+function skill_inline_file_error(int $code, string $message): void {
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+    skill_download_send_cors_headers();
+    http_response_code($code);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo $message;
+    exit;
+}
+
+/**
+ * Absolut URL till en .skill-fil.
+ * $inline=true: kort publik URL /s/filnamn.skill (för Skill Canvas m.fl.).
+ */
+function skill_skill_download_absolute_url(string $skillBasename, bool $inline = false): ?string {
+    $skillBasename = basename($skillBasename);
+    if (!validate_file_param($skillBasename)) {
+        return null;
+    }
+    if ($inline) {
+        return skill_public_base_url() . '/s/' . rawurlencode($skillBasename);
+    }
+    return skill_public_base_url() . '/download.php?file=' . rawurlencode($skillBasename);
+}
+
+/**
+ * Skill Canvas-länk för en skill, eller null om ej konfigurerad.
+ * Mall i config/settings.php: https://canvas.example/?file={skill_url}
+ * ({skill_url} = URL-kodad absolut URL, t.ex. https://skill.example/s/filnamn.skill)
+ */
+function skill_canvas_url_for_skill(string $skillBasename): ?string {
+    $template = trim((string)(skill_settings()['skill_canvas_url'] ?? ''));
+    if ($template === '') {
+        return null;
+    }
+    $skillUrl = skill_skill_download_absolute_url($skillBasename, true);
+    if ($skillUrl === null) {
+        return null;
+    }
+    $encoded = rawurlencode($skillUrl);
+    if (str_contains($template, '{skill_url}')) {
+        return str_replace('{skill_url}', $encoded, $template);
+    }
+    if (preg_match('/[=?]$/', $template)) {
+        return $template . $encoded;
+    }
+    return null;
+}
+
+/** Knapp till Skill Canvas i header (visas endast om skill_canvas_url är satt). */
+function skill_render_canvas_button(string $skillBasename): void {
+    $url = skill_canvas_url_for_skill($skillBasename);
+    if ($url === null) {
+        return;
+    }
+    $title = h(__('view.canvas_title'));
+    $label = h(__('view.canvas_btn'));
+    echo '<a href="' . h($url) . '" class="btn btn-white btn-sm" target="_blank" rel="noopener noreferrer" title="' . $title . '">🖼 ' . $label . '</a>';
+}
+
+/** Länk till chat.html med samma ?file= som Skill Canvas (absolut /s/…-URL). */
+function skill_chat_url_for_skill(string $skillBasename, string $hrefPrefix = '../'): ?string {
+    $skillUrl = skill_skill_download_absolute_url($skillBasename, true);
+    if ($skillUrl === null) {
+        return null;
+    }
+    return $hrefPrefix . 'chat.html?file=' . rawurlencode($skillUrl);
+}
+
+/** Knapp till chat.html i header. */
+function skill_render_chat_button(string $skillBasename, string $hrefPrefix = '../'): void {
+    $url = skill_chat_url_for_skill($skillBasename, $hrefPrefix);
+    if ($url === null) {
+        return;
+    }
+    $title = h(__('view.chat_title'));
+    $label = h(__('view.chat_btn'));
+    echo '<a href="' . h($url) . '" class="btn btn-white btn-sm" target="_blank" rel="noopener noreferrer" title="' . $title . '">💬 ' . $label . '</a>';
 }
 
 /** Inställningsknapp i header (endast admin). */
