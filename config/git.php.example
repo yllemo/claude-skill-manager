@@ -1,0 +1,48 @@
+<?php
+// Skyddas från direkt HTTP-åtkomst
+if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) === __FILE__) {
+    http_response_code(403);
+    exit;
+}
+
+/**
+ * Kopiera till git.php och fyll i token + repo.
+ * Token lagras endast på servern — lägg config/git.php i .gitignore.
+ *
+ * Kräver Contents: Read and write (GitHub) eller write_repository (GitLab).
+ * Se https://github.com/yllemo/php-git-simple
+ */
+return [
+
+    'enabled' => false,
+
+    // github | gitlab
+    'provider' => 'github',
+
+    // Lämna tomt i exempel — fyll i git.php (sparas via /settings/?tab=git)
+    'token' => '',
+
+    // GitHub: ägare/org  |  GitLab: namespace (t.ex. mygroup/subgroup)
+    'owner' => '',
+
+    // Endast repo-namnet
+    'repo' => '',
+
+    'branch' => 'main',
+
+    // GitLab-bas (gitlab.com eller self-hosted)
+    'gitlab_url' => 'https://gitlab.com',
+
+    // Mapp i repot där .skill-filer sparas (tom = repo-rot)
+    'path_prefix' => 'content',
+
+    'commit_message' => 'Sync skills from Skill Manager',
+
+    // Ta bort .skill i git som saknas lokalt under /content
+    'delete_missing' => false,
+
+    'last_sync_at' => '',
+    'last_sync_status' => '',
+    'last_sync_summary' => '',
+
+];

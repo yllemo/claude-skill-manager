@@ -25,6 +25,7 @@ php_errors.log
 !content/index.php
 /config/config.php
 /config/key.env
+/config/git.php
 
 # Logs
 *.log

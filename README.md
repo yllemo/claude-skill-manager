@@ -10,11 +10,13 @@ A professional PHP-based web application for creating, editing, and managing `.s
 
 ## 🚀 Latest Updates
 
+- 🔄 **Git sync (admin)** — Push all `/content/*.skill` to GitHub or GitLab from Settings → Git sync ([php-git-simple](https://github.com/yllemo/php-git-simple) API client)
+- 📎 **Links & ideas (admin)** — Collect external repos, skill collections, pages, and planned-skill ideas under Settings → Links & ideas
 - 🖼️ **Skill Canvas** — Open a skill on an external whiteboard from the viewer; URL template in `config/settings.php` (`skill_canvas_url`)
 - 💬 **SKILL Chat** — `chat.html` loads a skill via `?file=` and chats against its contents; button in the viewer (new tab)
 - 🔗 **Public skill URLs** — Short shareable links at `/s/name.skill` for external tools (Skill Canvas, Chat); `/content/` blocked from direct HTTP access
 - 👥 **Multi-user ACL** — User accounts in `config/users.php` (bcrypt passwords); roles `admin` and `user`
-- ⚙️ **Settings page** — Guest access, per-skill visibility (`PUBLIC` / `INTERNAL`), and user management (admin only)
+- ⚙️ **Settings page** — Guest access, visibility, users, links & ideas, and Git sync (admin only)
 - 📁 **Configurable file types** — Allowed extensions and MIME types in `config/files.php` (`.sef`, `.ac`, `.csv`, code, images, and more)
 - 🔗 **Direct file URLs** — Open any archive file via `/view/?file=name.skill&path=docs/test.html` (shareable links)
 - ✏️ **Multi-format editing** — Monaco syntax highlighting for many text types; markdown preview only for `.md`
@@ -48,6 +50,8 @@ A professional PHP-based web application for creating, editing, and managing `.s
 - ⚡ **Performance Optimized** — Fast loading and efficient file handling
 - 🧩 **MCP Integration** — JSON-RPC endpoint for AI client integration
 - 🖼️ **Skill Canvas & Chat** — External whiteboard link and local `chat.html` from the viewer, both using the same public `/s/…` skill URL
+- 🔄 **Git sync** — Admin push of `content/*.skill` to GitHub or GitLab ([php-git-simple](https://github.com/yllemo/php-git-simple))
+- 📎 **Links & ideas** — Admin backlog of external resources and planned skills (`config/links.php`)
 - 🌐 **Localization** — Built-in Swedish (`sv`) and English (`en`); switch UI language in `config/lang.php`
 
 ## 💡 Why Use Claude Skill Manager?
@@ -72,6 +76,10 @@ skill/
 ├── _common.php         # Shared functions, CSS and helpers
 ├── _lang.php           # UI translations (built-in sv/en) and __( ) helper
 ├── _auth.php           # Session authentication
+├── _git.php            # Git sync helpers (content/ → GitHub/GitLab)
+├── _links.php          # Admin links & skill-idea list helpers
+├── lib/
+│   └── GitRepoClient.php # REST client for GitHub + GitLab
 ├── AI.md               # AI functionality documentation
 ├── MCP.md              # AI-focused MCP documentation
 ├── config/
@@ -80,6 +88,10 @@ skill/
 │   ├── users.php.example # Template for users.php
 │   ├── settings.php      # Guest access and skill visibility rules
 │   ├── settings.php.example
+│   ├── git.php           # Git sync credentials (gitignore) — copy from git.php.example
+│   ├── git.php.example
+│   ├── links.php         # Admin links & skill ideas — copy from links.php.example
+│   ├── links.php.example
 │   ├── files.php         # Allowed file extensions and MIME types for archives
 │   ├── files.php.example
 │   ├── lang.php          # UI locale (sv/en/…) and optional string overrides
@@ -87,7 +99,7 @@ skill/
 │   ├── key.env.example   # Template for API keys and environment variables
 │   └── .htaccess         # Blocks direct HTTP access to /config/
 ├── settings/
-│   └── index.php         # Access & user settings (admin only)
+│   └── index.php         # Access, users, links & ideas, Git sync (admin only)
 ├── ai/
 │   ├── index.php       # AI-powered skill editor
 │   ├── chat.php        # AI chat API endpoint
@@ -180,10 +192,11 @@ skill/
 - Built-in skill templates and export chat as Markdown
 
 ### ⚙️ Settings (`/settings/`)
-**Requires admin login.**
-- **Access** — Allow or deny guest access; enforce `visibility` from SKILL.md; default visibility for new skills
-- **Users (ACL)** — Add/edit/delete users; change roles (`admin` / `user`) and passwords (stored as bcrypt in `config/users.php`)
-- All settings persisted under `/config/` (`settings.php`, `users.php`)
+**Requires admin login.** Tabs:
+
+- **Access & users** — Guest access; `visibility` from SKILL.md; default visibility; user CRUD (`config/users.php`)
+- **Links & ideas** — External repos, collections, pages, and planned skill ideas (`config/links.php`); filter by type/status
+- **Git sync** — Configure GitHub/GitLab token + repo; test connection; push all `content/*.skill` to the remote path (see [php-git-simple](https://github.com/yllemo/php-git-simple)). Settings in `config/git.php` (gitignored).
 
 ### 🤖 MCP Endpoint (`/mcp/index.php`)
 **Read endpoint for AI clients (JSON-RPC style). Respects access and visibility settings.**
@@ -480,7 +493,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 This is an **active project** currently in production use. We're continuously improving the codebase and adding new features based on user feedback.
 
 **Current Status:** Stable ✅  
-**Version:** 1.3.0  
+**Version:** 1.3.2  
 **Maintenance:** Active development  
 
 ## 🗺️ Roadmap

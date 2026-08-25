@@ -1,0 +1,35 @@
+<?php
+// Skyddas från direkt HTTP-åtkomst
+if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) === __FILE__) {
+    http_response_code(403);
+    exit;
+}
+
+/**
+ * Externa länkar, skill-samlingar och idéer (admin).
+ * Kopiera till links.php eller spara via /settings/?tab=links
+ *
+ * type:    repo | collection | page | idea
+ * status:  active | planned | done | archived
+ */
+return [
+
+    'items' => [
+
+        // Exempel — ta bort eller behåll som mall:
+        // [
+        //     'id' => 'lnk_example',
+        //     'title' => 'Anthropic Skills docs',
+        //     'url' => 'https://docs.anthropic.com/claude/docs/skills',
+        //     'type' => 'page',
+        //     'status' => 'active',
+        //     'notes' => 'Officiell dokumentation',
+        //     'tags' => 'docs, anthropic',
+        //     'sort' => 10,
+        //     'created_at' => '2026-08-25T00:00:00+00:00',
+        //     'updated_at' => '2026-08-25T00:00:00+00:00',
+        // ],
+
+    ],
+
+];

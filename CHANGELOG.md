@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2026-08-25
+
+### Added
+- **Links & ideas (admin)** — Settings tab `/settings/?tab=links` for external repos, skill collections, pages, and planned-skill ideas
+- **`_links.php` + `config/links.php.example`** — CRUD with type (`repo` / `collection` / `page` / `idea`), status (`planned` / `active` / `done` / `archived`), notes, tags, and filters
+
+## [1.3.1] - 2026-08-25
+
+### Added
+- **Git sync (admin)** — Settings tab `/settings/?tab=git` to push all `content/*.skill` to GitHub or GitLab via REST API
+- **`lib/GitRepoClient.php`** — Client based on [yllemo/php-git-simple](https://github.com/yllemo/php-git-simple) with binary (base64) support for `.skill` archives
+- **`_git.php` + `config/git.php.example`** — Connection settings, test connection, sync log; token stored only in `config/git.php` (gitignored)
+- Optional delete of remote `.skill` files missing locally under the configured path prefix
+
+### Security
+- Git sync and settings UI require admin role
+- API token never shown back in the form after save (leave blank to keep)
+
 ## [1.3.0] - 2026-07-10
 
 ### Added
