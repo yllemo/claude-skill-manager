@@ -447,16 +447,16 @@ function skill_render_canvas_button(string $skillBasename): void {
     echo '<a href="' . h($url) . '" class="btn btn-white btn-sm" target="_blank" rel="noopener noreferrer" title="' . $title . '">🖼 ' . $label . '</a>';
 }
 
-/** Länk till chat.html med samma ?file= som Skill Canvas (absolut /s/…-URL). */
+/** Länk till chat.php?file=name.skill (skill laddas server-side). */
 function skill_chat_url_for_skill(string $skillBasename, string $hrefPrefix = '../'): ?string {
-    $skillUrl = skill_skill_download_absolute_url($skillBasename, true);
-    if ($skillUrl === null) {
+    $skillBasename = basename($skillBasename);
+    if (!validate_file_param($skillBasename)) {
         return null;
     }
-    return $hrefPrefix . 'chat.html?file=' . rawurlencode($skillUrl);
+    return $hrefPrefix . 'chat.php?file=' . rawurlencode($skillBasename);
 }
 
-/** Knapp till chat.html i header. */
+/** Knapp till chat.php i header. */
 function skill_render_chat_button(string $skillBasename, string $hrefPrefix = '../'): void {
     $url = skill_chat_url_for_skill($skillBasename, $hrefPrefix);
     if ($url === null) {

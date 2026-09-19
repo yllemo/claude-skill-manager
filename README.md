@@ -13,7 +13,7 @@ A professional PHP-based web application for creating, editing, and managing `.s
 - 🔄 **Git sync (admin)** — Push all `/content/*.skill` to GitHub or GitLab from Settings → Git sync ([php-git-simple](https://github.com/yllemo/php-git-simple) API client)
 - 📎 **Links & ideas (admin)** — Collect external repos, skill collections, pages, and planned-skill ideas under Settings → Links & ideas
 - 🖼️ **Skill Canvas** — Open a skill on an external whiteboard from the viewer; URL template in `config/settings.php` (`skill_canvas_url`)
-- 💬 **SKILL Chat** — `chat.html` loads a skill via `?file=` and chats against its contents; button in the viewer (new tab)
+- 💬 **SKILL Chat** — `chat.php?file=name.skill` loads the skill server-side and chats against its contents; button in the viewer (new tab)
 - 🔗 **Public skill URLs** — Short shareable links at `/s/name.skill` for external tools (Skill Canvas, Chat); `/content/` blocked from direct HTTP access
 - 👥 **Multi-user ACL** — User accounts in `config/users.php` (bcrypt passwords); roles `admin` and `user`
 - ⚙️ **Settings page** — Guest access, visibility, users, links & ideas, and Git sync (admin only)
@@ -49,7 +49,7 @@ A professional PHP-based web application for creating, editing, and managing `.s
 - 🌐 **Public Viewing** — Share skills publicly while keeping editing secure
 - ⚡ **Performance Optimized** — Fast loading and efficient file handling
 - 🧩 **MCP Integration** — JSON-RPC endpoint for AI client integration
-- 🖼️ **Skill Canvas & Chat** — External whiteboard link and local `chat.html` from the viewer, both using the same public `/s/…` skill URL
+- 🖼️ **Skill Canvas & Chat** — External whiteboard via `/s/…`; local `chat.php?file=name.skill` loads the archive server-side
 - 🔄 **Git sync** — Admin push of `content/*.skill` to GitHub or GitLab ([php-git-simple](https://github.com/yllemo/php-git-simple))
 - 📎 **Links & ideas** — Admin backlog of external resources and planned skills (`config/links.php`)
 - 🌐 **Localization** — Built-in Swedish (`sv`) and English (`en`); switch UI language in `config/lang.php`
@@ -71,7 +71,8 @@ skill/
 ├── logout.php          # Logout handler
 ├── download.php        # Download .skill/.zip; inline mode via ?inline=1
 ├── download_content.php # Bulk content download (requires authentication)
-├── chat.html           # Standalone chat UI — load skill from ?file= URL
+├── chat.php            # Skill chat UI — loads .skill server-side via ?file=name.skill
+├── chat.html           # Redirects to chat.php (legacy)
 ├── favicon.ico         # Custom favicon for the application
 ├── _common.php         # Shared functions, CSS and helpers
 ├── _lang.php           # UI translations (built-in sv/en) and __( ) helper
@@ -153,7 +154,7 @@ skill/
 - Copy button for file contents
 - Edit button shown only when authenticated (guests see Login button instead)
 - **Skill Canvas** button (new tab) when `skill_canvas_url` is set in `config/settings.php`
-- **Chat** button (new tab) opens `chat.html?file=…` with the same public skill URL
+- **Chat** button (new tab) opens `chat.php?file=name.skill` (skill loaded server-side)
 - **Settings** button (admin only, header / mobile menu)
 - Download button includes format dropdown (`.skill` / `.zip`)
 - **Print-friendly** — Optimized printing with clean layout (hides navigation, headers, etc.)
@@ -184,12 +185,13 @@ skill/
 - All traditional editing features (file management, templates, etc.)
 - AI provider settings with model selection and temperature control
 
-### 💬 SKILL Chat (`/chat.html`)
-**Standalone chat against skill content (opens from viewer or directly).**
-- Load a `.skill` archive from `?file=` — absolute URL to `/s/name.skill` (same format as Skill Canvas)
-- Example: `chat.html?file=https%3A%2F%2Fskill.example.se%2Fs%2Fmy-skill.skill`
-- Select which text files to include as context; chat via Ollama, LM Studio, or OpenAI (browser or server)
-- Built-in skill templates and export chat as Markdown
+### 💬 SKILL Chat (`/chat.php`)
+**Chat against skill content (opens from viewer or directly).**
+- Loads a `.skill` from `/content/` **server-side** via `?file=name.skill` (respects access / visibility)
+- Example: `chat.php?file=my-skill.skill`
+- Select which text files to include as context; chat via Ollama, LM Studio, or OpenAI (browser-side)
+- Export chat as Markdown
+- Legacy `chat.html?file=…` redirects to `chat.php`
 
 ### ⚙️ Settings (`/settings/`)
 **Requires admin login.** Tabs:
@@ -493,7 +495,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 This is an **active project** currently in production use. We're continuously improving the codebase and adding new features based on user feedback.
 
 **Current Status:** Stable ✅  
-**Version:** 1.3.2  
+**Version:** 1.3.3  
 **Maintenance:** Active development  
 
 ## 🗺️ Roadmap

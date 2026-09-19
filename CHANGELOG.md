@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.3] - 2026-09-19
+
+### Changed
+- **SKILL Chat** — `chat.html` → `chat.php`; skill loaded server-side from `content/` via `?file=name.skill` (access control applied). Viewer Chat button and `_common.php` link updated; legacy `chat.html` redirects to `chat.php`.
+- **SKILL Chat UI** — Removed built-in skills, dropzone and manual file/folder/zip picker; chat is driven by the skill opened from the viewer.
+
 ## [1.3.2] - 2026-08-25
 
 ### Added
