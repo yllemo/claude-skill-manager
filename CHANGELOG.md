@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- Viewer sidebar: height limits and expand/collapse controls for descriptions and metadata; scrollable information area preserves space for visibility and files.
+- Dashboard: tag previews are limited to 60 characters and roughly two lines, with controls to show all tags or collapse them. Search and filters still include all tags.
+- MCP endpoint: upgraded to protocol 2026-07-28 with stateless Streamable HTTP, request metadata/header validation, discovery and current result/error formats. **Breaking:** initialize-based clients must migrate.
+- MCP test panel: browser requests use the current login and include automated protocol checks; added a Node.js HTTP regression script.
+- README and AI integration guide updated for the layout and MCP changes.
+
 ## [1.3.3] - 2026-09-19
 
 ### Changed

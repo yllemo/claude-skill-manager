@@ -20,18 +20,37 @@ This is intended for AI assistants/agents that need structured access to local s
 ## Important Paths
 
 - `content/` - stores `.skill` files
-- `mcp/index.php` - MCP-like JSON-RPC server
+- `mcp/index.php` - MCP 2026-07-28 Streamable HTTP server
 - `mcp/test.php` - manual test panel for MCP calls
 - `_common.php` - shared helpers for ZIP and metadata handling
 - `skill-intro.md` - human-facing explanation of skill format
 
 ## Protocol Overview
 
-The MCP server currently accepts JSON-RPC 2.0 style calls.
+The server implements MCP **2026-07-28** over stateless Streamable HTTP, with JSON responses.
+There is no initialize handshake or MCP session. Every request includes protocol version and
+client capabilities in params._meta. Each POST must include:
+
+- Content-Type: application/json
+- Accept: application/json, text/event-stream
+- MCP-Protocol-Version: 2026-07-28
+- Mcp-Method: the JSON-RPC method
+- Mcp-Name: the tool name for tools/call
+
+Origin, when present, must match the application's origin. Browser calls use the current login
+cookie; other clients use guest access and see only skills allowed by access/visibility settings.
+GET and DELETE return 405. Notifications receive 202 with no response body.
+Unsupported versions return HTTP 400 and error -32022 with supported versions.
+Header/body mismatches return HTTP 400 and error -32020. Unknown methods return HTTP 404.
+Successful results include resultType: complete and server identity in result._meta.
+Discovery and tool lists include ttlMs: 0 and cacheScope: private.
+
+Older initialize-based clients must migrate to this request format.
+See the [official specification](https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning).
 
 ### Supported methods
 
-- `initialize`
+- `server/discover`
 - `tools/list`
 - `tools/call`
 - `ping`
@@ -44,14 +63,23 @@ The MCP server currently accepts JSON-RPC 2.0 style calls.
 
 ## Quick JSON-RPC Examples
 
-### 1) Initialize
+### 1) Discover the server
 
 ```json
 {
   "jsonrpc": "2.0",
   "id": 1,
-  "method": "initialize",
-  "params": {}
+  "method": "server/discover",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "example-client",
+        "version": "1.0.0"
+      }
+    }
+  }
 }
 ```
 
@@ -62,7 +90,16 @@ The MCP server currently accepts JSON-RPC 2.0 style calls.
   "jsonrpc": "2.0",
   "id": 2,
   "method": "tools/list",
-  "params": {}
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "example-client",
+        "version": "1.0.0"
+      }
+    }
+  }
 }
 ```
 
@@ -75,7 +112,15 @@ The MCP server currently accepts JSON-RPC 2.0 style calls.
   "method": "tools/call",
   "params": {
     "name": "list_skills",
-    "arguments": {}
+    "arguments": {},
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "example-client",
+        "version": "1.0.0"
+      }
+    }
   }
 }
 ```
@@ -91,6 +136,14 @@ The MCP server currently accepts JSON-RPC 2.0 style calls.
     "name": "read_skill",
     "arguments": {
       "file": "example.skill"
+    },
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "example-client",
+        "version": "1.0.0"
+      }
     }
   }
 }
@@ -107,6 +160,14 @@ The MCP server currently accepts JSON-RPC 2.0 style calls.
     "name": "search_skills",
     "arguments": {
       "query": "markdown"
+    },
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "example-client",
+        "version": "1.0.0"
+      }
     }
   }
 }
@@ -199,7 +260,7 @@ Use:
 
 - `/mcp/test.php`
 
-It provides buttons/forms for `initialize`, `tools/list`, `ping`, and each tool call.
+It provides buttons/forms for `server/discover`, `tools/list`, `ping`, and each tool call, plus automated protocol tests.
 
 ## Operational Notes for AI Agents
 
@@ -217,3 +278,16 @@ It provides buttons/forms for `initialize`, `tools/list`, `ping`, and each tool 
 - Add MCP resources (`resources/list`, `resources/read`)
 - Add pagination/filter params to `list_skills`
 - Add full-text search inside file contents, not only metadata
+
+## Testing
+
+Open /mcp/test.php to call discovery, ping and the three tools using your current browser login.
+The **Kör protokolltester** button checks success responses and protocol errors.
+Run HTTP regression checks against a running PHP server with:
+
+~~~sh
+node mcp/check.mjs http://127.0.0.1:8000/mcp/index.php
+~~~
+
+PHP needs the ZIP extension to read skill archives. Tests of archive content should use
+an existing skill file and verify both guest visibility and logged-in access.

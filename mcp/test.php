@@ -1,74 +1,6 @@
 <?php
 declare(strict_types=1);
-
-function build_mcp_url(): string {
-    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
-    $scheme = $https ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    $base = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/mcp/test.php'), '/\\');
-    return $scheme . '://' . $host . $base . '/index.php';
-}
-
-function send_jsonrpc(string $url, array $payload): array {
-    $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    $ctx = stream_context_create([
-        'http' => [
-            'method' => 'POST',
-            'header' => "Content-Type: application/json\r\n",
-            'content' => $json,
-            'timeout' => 20,
-        ],
-    ]);
-    $resp = @file_get_contents($url, false, $ctx);
-    if ($resp === false) {
-        return ['error' => 'Kunde inte nå MCP-servern på ' . $url];
-    }
-    $decoded = json_decode($resp, true);
-    return is_array($decoded) ? $decoded : ['raw' => $resp];
-}
-
-$endpoint = build_mcp_url();
-$action = $_POST['action'] ?? '';
-$readFile = trim((string)($_POST['read_file'] ?? ''));
-$searchQuery = trim((string)($_POST['search_query'] ?? ''));
-
-$requestPayload = null;
-$result = null;
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if ($action === 'initialize') {
-        $requestPayload = ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'initialize', 'params' => new stdClass()];
-    } elseif ($action === 'tools_list') {
-        $requestPayload = ['jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/list', 'params' => new stdClass()];
-    } elseif ($action === 'ping') {
-        $requestPayload = ['jsonrpc' => '2.0', 'id' => 3, 'method' => 'ping', 'params' => new stdClass()];
-    } elseif ($action === 'list_skills') {
-        $requestPayload = [
-            'jsonrpc' => '2.0',
-            'id' => 4,
-            'method' => 'tools/call',
-            'params' => ['name' => 'list_skills', 'arguments' => new stdClass()],
-        ];
-    } elseif ($action === 'read_skill') {
-        $requestPayload = [
-            'jsonrpc' => '2.0',
-            'id' => 5,
-            'method' => 'tools/call',
-            'params' => ['name' => 'read_skill', 'arguments' => ['file' => $readFile]],
-        ];
-    } elseif ($action === 'search_skills') {
-        $requestPayload = [
-            'jsonrpc' => '2.0',
-            'id' => 6,
-            'method' => 'tools/call',
-            'params' => ['name' => 'search_skills', 'arguments' => ['query' => $searchQuery]],
-        ];
-    }
-
-    if ($requestPayload !== null) {
-        $result = send_jsonrpc($endpoint, $requestPayload);
-    }
-}
+require_once __DIR__ . '/protocol.php';
 ?>
 <!doctype html>
 <html lang="sv">
@@ -77,51 +9,105 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>MCP Test</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; color: #222; }
-    .card { border: 1px solid #ddd; border-radius: 8px; padding: 14px; margin-bottom: 14px; }
-    .row { display: flex; gap: 8px; flex-wrap: wrap; }
-    input[type=text] { padding: 8px; min-width: 280px; }
-    button { padding: 8px 12px; cursor: pointer; }
-    pre { background: #f7f7f7; border: 1px solid #eee; border-radius: 6px; padding: 12px; overflow: auto; }
-    .muted { color: #666; font-size: 0.9rem; }
+    body{font-family:Arial,sans-serif;margin:20px;color:#222;max-width:1100px}
+    .card{border:1px solid #ddd;border-radius:8px;padding:14px;margin-bottom:14px}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    input{padding:8px;min-width:220px;max-width:100%;box-sizing:border-box}
+    button{padding:8px 12px;cursor:pointer}button:disabled{cursor:wait;opacity:.6}
+    pre{background:#f7f7f7;border:1px solid #eee;border-radius:6px;padding:12px;overflow:auto;max-height:450px}
+    .muted{color:#666;font-size:.9rem}
   </style>
 </head>
 <body>
   <h1>MCP Testpanel</h1>
-  <p class="muted">Endpoint: <code><?= htmlspecialchars($endpoint, ENT_QUOTES) ?></code></p>
-
-  <div class="card">
-    <div class="row">
-      <form method="post"><input type="hidden" name="action" value="initialize"><button type="submit">initialize</button></form>
-      <form method="post"><input type="hidden" name="action" value="tools_list"><button type="submit">tools/list</button></form>
-      <form method="post"><input type="hidden" name="action" value="ping"><button type="submit">ping</button></form>
-      <form method="post"><input type="hidden" name="action" value="list_skills"><button type="submit">tools/call: list_skills</button></form>
-    </div>
+  <p class="muted">Endpoint: <code id="endpoint"></code> · MCP <?= MCP_PROTOCOL_VERSION ?></p>
+  <p>Varje anrop skickar protokollversion, klientmetadata och MCP-headers. Ingen initialize krävs. Din aktuella inloggning används.</p>
+  <div class="card row">
+    <button type="button" data-method="server/discover">server/discover</button>
+    <button type="button" data-method="tools/list">tools/list</button>
+    <button type="button" data-method="ping">ping</button>
+    <button type="button" data-tool="list_skills">tools/call: list_skills</button>
+    <button type="button" id="run-tests">Kör protokolltester</button>
   </div>
-
-  <div class="card">
-    <form method="post" class="row">
-      <input type="hidden" name="action" value="read_skill">
-      <input type="text" name="read_file" placeholder="exempel: my-skill.skill" value="<?= htmlspecialchars($readFile, ENT_QUOTES) ?>">
-      <button type="submit">tools/call: read_skill</button>
-    </form>
+  <form class="card row" id="read-form">
+    <label for="read-file">Skillfil</label><input id="read-file" placeholder="my-skill.skill" required>
+    <button>tools/call: read_skill</button>
+  </form>
+  <form class="card row" id="search-form">
+    <label for="search-query">Sökterm</label><input id="search-query" placeholder="sökterm…" required>
+    <button>tools/call: search_skills</button>
+  </form>
+  <div class="card" aria-live="polite">
+    <p id="status">Välj ett anrop eller kör protokolltesterna.</p>
+    <h3>Request</h3><pre id="request"></pre>
+    <h3>Response</h3><pre id="response"></pre>
+    <h3>Testresultat</h3><pre id="test-results"></pre>
   </div>
-
-  <div class="card">
-    <form method="post" class="row">
-      <input type="hidden" name="action" value="search_skills">
-      <input type="text" name="search_query" placeholder="sökterm..." value="<?= htmlspecialchars($searchQuery, ENT_QUOTES) ?>">
-      <button type="submit">tools/call: search_skills</button>
-    </form>
-  </div>
-
-  <?php if ($requestPayload !== null): ?>
-    <div class="card">
-      <h3>Request</h3>
-      <pre><?= htmlspecialchars((string)json_encode($requestPayload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), ENT_QUOTES) ?></pre>
-      <h3>Response</h3>
-      <pre><?= htmlspecialchars((string)json_encode($result, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), ENT_QUOTES) ?></pre>
-    </div>
-  <?php endif; ?>
+<script>
+const endpoint = new URL('index.php', location.href).href;
+const version = <?= json_encode(MCP_PROTOCOL_VERSION) ?>;
+let nextId = 1;
+document.getElementById('endpoint').textContent = endpoint;
+function request(method, params = {}) {
+  return {jsonrpc:'2.0', id:nextId++, method, params:{...params, _meta:{
+    'io.modelcontextprotocol/protocolVersion':version,
+    'io.modelcontextprotocol/clientCapabilities':{},
+    'io.modelcontextprotocol/clientInfo':{name:'skill-manager-test', version:'2.0.0'}
+  }}};
+}
+async function send(payload, overrides = {}, httpMethod = 'POST') {
+  const headers = {'Content-Type':'application/json', Accept:'application/json, text/event-stream',
+    'MCP-Protocol-Version':payload.params?._meta?.['io.modelcontextprotocol/protocolVersion'] || version,
+    'Mcp-Method':payload.method, ...overrides};
+  if (payload.params?.name) headers['Mcp-Name'] = payload.params.name;
+  document.getElementById('request').textContent = JSON.stringify({httpMethod, headers, body:payload},null,2);
+  const res = await fetch(endpoint, {method:httpMethod, headers, credentials:'same-origin',
+    body:httpMethod === 'POST' ? JSON.stringify(payload) : undefined, signal:AbortSignal.timeout(20000)});
+  const raw = await res.text();
+  let body;
+  try {body = raw ? JSON.parse(raw) : null;} catch {body = raw;}
+  const result = {status:res.status, contentType:res.headers.get('content-type'), body};
+  document.getElementById('response').textContent = JSON.stringify(result,null,2);
+  document.getElementById('status').textContent = 'HTTP ' + res.status;
+  return result;
+}
+async function busy(work) {
+  document.querySelectorAll('button').forEach(b => b.disabled = true);
+  try {await work();} catch(e) {document.getElementById('status').textContent = 'Fel: ' + e.message;}
+  finally {document.querySelectorAll('button').forEach(b => b.disabled = false);}
+}
+document.querySelectorAll('[data-method], [data-tool]').forEach(button => {
+  button.addEventListener('click', () => busy(() => send(button.dataset.method
+    ? request(button.dataset.method) : request('tools/call',{name:button.dataset.tool,arguments:{}}))));
+});
+document.getElementById('read-form').addEventListener('submit', e => {
+  e.preventDefault();busy(() => send(request('tools/call',{name:'read_skill',arguments:{file:document.getElementById('read-file').value.trim()}})));
+});
+document.getElementById('search-form').addEventListener('submit', e => {
+  e.preventDefault();busy(() => send(request('tools/call',{name:'search_skills',arguments:{query:document.getElementById('search-query').value.trim()}})));
+});
+document.getElementById('run-tests').addEventListener('click', () => busy(async () => {
+  const checks = [
+    ['Discovery',request('server/discover'),{},'POST',r => r.status===200 && r.body?.result?.supportedVersions?.includes(version)],
+    ['Verktyg och JSON-schema',request('tools/list'),{},'POST',r => r.status===200 && r.body?.result?.tools?.length===3 && !Array.isArray(r.body.result.tools[0].inputSchema.properties)],
+    ['Ping',request('ping'),{},'POST',r => r.status===200 && r.body?.result?.resultType==='complete'],
+    ['Fel header',request('ping'),{'Mcp-Method':'tools/list'},'POST',r => r.status===400 && r.body?.error?.code===-32020],
+    ['Okänd version',request('ping'),{},'POST',r => r.status===400 && r.body?.error?.code===-32022 && r.body.error.data.supported.includes(version)],
+    ['Okänd metod',request('unknown/method'),{},'POST',r => r.status===404 && r.body?.error?.code===-32601],
+    ['Fel argumenttyp',request('tools/call',{name:'search_skills',arguments:{query:42}}),{},'POST',r => r.status===200 && r.body?.result?.isError===true],
+    ['Batch avvisas',[request('ping')],{},'POST',r => r.status===400 && r.body?.error?.code===-32600],
+    ['GET avvisas',request('ping'),{},'GET',r => r.status===405],
+    ['Notification utan svar',{jsonrpc:'2.0',method:'notifications/test'}, {},'POST',r => r.status===202 && r.body===null]
+  ];
+  checks[4][1].params._meta['io.modelcontextprotocol/protocolVersion']='1900-01-01';
+  const lines=[];
+  for(const [label,payload,headers,method,check] of checks) {
+    const r = await send(payload,headers,method);
+    lines.push((check(r) ? 'OK' : 'FEL') + ' — ' + label + ' (HTTP ' + r.status + ')');
+    document.getElementById('test-results').textContent=lines.join('\n');
+  }
+  document.getElementById('status').textContent=lines.filter(l=>l.startsWith('OK')).length + '/' + checks.length + ' tester godkända';
+}));
+</script>
 </body>
 </html>

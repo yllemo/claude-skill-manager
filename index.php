@@ -197,6 +197,13 @@ html, body { height: auto; overflow: auto; }
 .tag { display: inline-block; background: var(--bg-info); border: 1px solid var(--border-l); border-radius: 3px; padding: 1px 6px; font-size: .67rem; color: var(--text-2); margin: 1px; cursor: pointer; text-decoration: none; }
 a.tag { color: var(--text-2); }
 .tag:hover { border-color: var(--accent); color: var(--accent); }
+.tags-wrap { display: flex; align-items: flex-start; gap: 4px; max-width: 240px; }
+.tags-list { flex: 1; min-width: 0; max-height: 2.8rem; overflow: hidden; }
+.tags-list .tag { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+.tags-list .tag[hidden], .tags-toggle[hidden] { display: none; }
+.tags-wrap.expanded .tags-list { max-height: none; }
+.tags-wrap.expanded .tag { white-space: normal; overflow-wrap: anywhere; }
+.tags-toggle { flex-shrink: 0; font: inherit; font-size: .75rem; padding: 1px 6px; border: 1px solid var(--border-l); border-radius: 3px; background: var(--bg-info); color: var(--accent); cursor: pointer; }
 .col-meta { color: var(--text-2); white-space: nowrap; font-size: .76rem; }
 .col-actions { white-space: nowrap; text-align: right; }
 .col-actions .actions-wrap { display: flex; gap: 4px; justify-content: flex-end; align-items: center; }
@@ -416,14 +423,19 @@ a.tag { color: var(--text-2); }
       </td>
       <?php endif; ?>
       <td class="col-tags">
+        <div class="tags-wrap">
+        <div class="tags-list">
         <?php foreach (array_filter(array_map('trim', explode(',', $tags))) as $tag):
           $tagHref = '?tag=' . rawurlencode($tag);
           if ($sortQuery !== 'modified-desc') {
               $tagHref .= '&sort=' . rawurlencode($sortQuery);
           }
         ?>
-        <a href="<?= h($tagHref) ?>" class="tag" onclick="event.preventDefault(); setTagFilter(<?= json_encode($tag, JSON_HEX_TAG | JSON_HEX_APOS | JSON_UNESCAPED_UNICODE) ?>);"><?= h($tag) ?></a>
+        <a href="<?= h($tagHref) ?>" class="tag" title="<?= h($tag) ?>" onclick="event.preventDefault(); setTagFilter(<?= json_encode($tag, JSON_HEX_TAG | JSON_HEX_APOS | JSON_UNESCAPED_UNICODE) ?>);"><?= h($tag) ?></a>
         <?php endforeach; ?>
+        </div>
+        <button type="button" class="tags-toggle" aria-expanded="false" aria-label="<?= h(__('index.tags_more')) ?>" title="<?= h(__('index.tags_more')) ?>" hidden>...</button>
+        </div>
       </td>
       <td class="col-meta"><?= h($author) ?><?php if ($version): ?><br><span style="font-size:.7rem">v<?= h($version) ?></span><?php endif; ?></td>
       <td class="col-meta"><?= $numFiles ?></td>
@@ -617,6 +629,43 @@ function setTagFilter(tag) {
   applyFilters();
   document.getElementById('search-input').focus();
 }
+
+// Keep the preview within 60 Unicode characters; filtering still uses all tags.
+document.querySelectorAll('.tags-wrap').forEach(function(wrap, index) {
+  var list = wrap.querySelector('.tags-list');
+  var button = wrap.querySelector('.tags-toggle');
+  var tags = Array.from(list.querySelectorAll('a.tag'));
+  var originals = tags.map(function(tag) { return tag.textContent; });
+  list.id = 'tags-list-' + index;
+  button.setAttribute('aria-controls', list.id);
+  function update() {
+    var expanded = wrap.classList.contains('expanded');
+    var remaining = 60;
+    var shortened = false;
+    tags.forEach(function(tag, i) {
+      var chars = Array.from(originals[i]);
+      tag.hidden = !expanded && remaining <= 0;
+      tag.textContent = expanded || chars.length <= remaining
+        ? originals[i] : chars.slice(0, Math.max(0, remaining - 1)).join('') + '…';
+      if (tag.hidden || (!expanded && chars.length > remaining)) shortened = true;
+      remaining -= chars.length + 2;
+    });
+    button.hidden = !expanded && !shortened && list.scrollHeight <= list.clientHeight;
+    button.textContent = expanded ? '−' : '...';
+    var label = expanded
+      ? <?= json_encode(__('index.tags_less'), JSON_UNESCAPED_UNICODE) ?>
+      : <?= json_encode(__('index.tags_more'), JSON_UNESCAPED_UNICODE) ?>;
+    button.setAttribute('aria-label', label);
+    button.title = label;
+    button.setAttribute('aria-expanded', String(expanded));
+  }
+  button.addEventListener('click', function() {
+    wrap.classList.toggle('expanded');
+    update();
+  });
+  new ResizeObserver(update).observe(list);
+  update();
+});
 
 function initSortFromQueryString() {
   var sortSel = document.getElementById('sort-select');

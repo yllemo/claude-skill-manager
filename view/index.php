@@ -86,7 +86,7 @@ html,body{height:100%;overflow:hidden}
 .sb-title{font-size:.82rem;font-weight:700;color:var(--accent);margin-bottom:3px;word-break:break-word}
 .sb-meta{font-size:.7rem;color:var(--text-2);margin-bottom:8px}
 .sb-actions{display:flex;gap:4px;flex-wrap:wrap}
-.tree-wrap{flex:1;overflow-y:auto;padding:5px 0}
+.tree-wrap{flex:1;min-height:0;overflow-y:auto;padding:5px 0}
 
 /* TREE */
 .tree-item{display:flex;align-items:center;gap:5px;padding:4px 10px;cursor:pointer;font-size:.79rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .12s;user-select:none}
@@ -117,6 +117,14 @@ html,body{height:100%;overflow:hidden}
 .fib-v{color:var(--text-2)}
 
 /* SKILL META in sidebar */
+.sb-info{flex:0 1 auto;min-height:0;max-height:50%;overflow-y:auto}
+.sb-preview{max-height:7.5rem;overflow:hidden;overflow-wrap:anywhere}
+.sb-preview-metadata{max-height:9rem}
+.sb-preview.expanded{max-height:none}
+.sb-description{font-size:.76rem;color:var(--text-2);line-height:1.5;white-space:pre-wrap}
+.sb-expand{display:block;margin-top:6px;padding:2px 0;border:0;background:none;color:var(--accent);font:inherit;font-size:.7rem;cursor:pointer}
+.sb-expand[hidden]{display:none}
+.sb-expand:hover{text-decoration:underline}
 .sb-section{padding:10px 12px;border-bottom:1px solid var(--border-l);font-size:.75rem}
 .sb-section-lbl{font-size:.65rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
 .sb-kv{display:flex;flex-direction:column;gap:1px;margin-bottom:5px}
@@ -432,10 +440,12 @@ html,body{height:100%;overflow:hidden}
       </div>
     </div>
 
+    <div class="sb-info">
     <?php if (!empty($skillMeta['description'])): ?>
     <div class="sb-section">
       <div class="sb-section-lbl"><?= h(__('view.section_description')) ?></div>
-      <div style="font-size:.76rem;color:var(--text-2);line-height:1.5;white-space:pre-wrap"><?= h($skillMeta['description']) ?></div>
+      <div class="sb-preview sb-description" id="sb-description"><?= h($skillMeta['description']) ?></div>
+      <button type="button" class="sb-expand" aria-expanded="false" aria-controls="sb-description" hidden><?= h(__('view.expand')) ?></button>
     </div>
     <?php endif; ?>
 
@@ -444,12 +454,15 @@ html,body{height:100%;overflow:hidden}
     if ($metaDisplay): ?>
     <div class="sb-section">
       <div class="sb-section-lbl"><?= h(__('view.section_metadata')) ?></div>
+      <div class="sb-preview sb-preview-metadata" id="sb-metadata">
       <?php foreach ($metaDisplay as $k => $v): ?>
       <div class="sb-kv">
         <span class="sb-k"><?= h($k) ?></span>
         <span class="sb-v"><?= h($v) ?></span>
       </div>
       <?php endforeach; ?>
+      </div>
+      <button type="button" class="sb-expand" aria-expanded="false" aria-controls="sb-metadata" hidden><?= h(__('view.expand')) ?></button>
     </div>
     <?php endif; ?>
 
@@ -460,9 +473,11 @@ html,body{height:100%;overflow:hidden}
     </div>
     <?php endif; ?>
 
+    </div>
+
     <?php if ($isAuthed && skill_use_skill_visibility()): ?>
     <?php $skillVis = skill_skill_visibility($skillMeta); ?>
-    <div class="sb-section">
+    <div class="sb-section" style="flex-shrink:0">
       <div class="sb-section-lbl"><?= h(__('index.col_visibility')) ?></div>
       <span class="tag" style="<?= $skillVis === 'internal' ? 'background:#fdecea;color:#8b1a1a' : '' ?>">
         <?= h($skillVis === 'internal' ? __('index.visibility_internal') : __('index.visibility_public')) ?>
@@ -518,6 +533,23 @@ html,body{height:100%;overflow:hidden}
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 <script>
+document.querySelectorAll('.sb-expand').forEach(function(button) {
+  var preview = document.getElementById(button.getAttribute('aria-controls'));
+  function updateOverflow() {
+    if (!preview.classList.contains('expanded')) {
+      button.hidden = preview.scrollHeight <= preview.clientHeight;
+    }
+  }
+  button.addEventListener('click', function() {
+    var expanded = preview.classList.toggle('expanded');
+    button.setAttribute('aria-expanded', String(expanded));
+    button.textContent = expanded
+      ? <?= json_encode(__('view.collapse'), JSON_UNESCAPED_UNICODE) ?>
+      : <?= json_encode(__('view.expand'), JSON_UNESCAPED_UNICODE) ?>;
+  });
+  new ResizeObserver(updateOverflow).observe(preview);
+  updateOverflow();
+});
 var VIEW_LANG = {
   fmLabel: <?= json_encode(__('view.fm_label'), JSON_UNESCAPED_UNICODE) ?>,
   binaryFile: <?= json_encode(__('view.binary_file'), JSON_UNESCAPED_UNICODE) ?>,

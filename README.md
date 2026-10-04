@@ -82,7 +82,7 @@ skill/
 ├── lib/
 │   └── GitRepoClient.php # REST client for GitHub + GitLab
 ├── AI.md               # AI functionality documentation
-├── MCP.md              # AI-focused MCP documentation
+├── AI.md               # AI-focused MCP documentation
 ├── config/
 │   ├── config.php        # App name, session lifetime; legacy password for first-time user migration
 │   ├── users.php         # User accounts (bcrypt hashes) — auto-created on first login
@@ -107,7 +107,9 @@ skill/
 │   └── ai_lib.php      # AI integration library
 ├── mcp/
 │   ├── index.php       # MCP JSON-RPC endpoint
-│   └── test.php        # MCP web test panel
+│   ├── protocol.php    # Protocol version and request validation
+│   ├── test.php        # MCP web test panel
+│   └── check.mjs       # HTTP protocol regression checks (Node.js)
 ├── s/
 │   ├── index.php       # Public inline .skill URL (/s/name.skill)
 │   └── .htaccess       # Rewrite + disable gzip for zip serving
@@ -126,6 +128,7 @@ skill/
 **Overview — guest access depends on settings (see `/settings/`).**
 - Searchable and sortable table of `.skill` files (filtered by login state and visibility)
 - Filter by tags via dropdown or click on tag in list
+- Tag previews show at most 60 characters and roughly two lines. Click `...` to show all tags, or `−` to collapse them. Search and filtering always include every tag.
 - Columns: title, description, tags, author, file count, size, modified; **visibility** (`PUBLIC` / `INTERNAL`) when logged in
 - Upload (authenticated): accepts `.skill` and `.zip`
 - Upload validation: archive entries must use extensions listed in `config/files.php` (`allowed_extensions`)
@@ -150,6 +153,7 @@ skill/
   ```
 - **Interactive Mermaid diagrams** — Fullscreen viewing with pan/zoom, text selection in SVG elements
 - Sidebar shows frontmatter metadata, tags, and file info with support for multi-line descriptions
+- Long descriptions and metadata have height limits with **Show more / Show less** controls. The information area scrolls within half the sidebar height, leaving visibility and the file tree accessible.
 - Toggle between rendered view and raw text (for `.md` in the main panel)
 - Copy button for file contents
 - Edit button shown only when authenticated (guests see Login button instead)
@@ -201,13 +205,17 @@ skill/
 - **Git sync** — Configure GitHub/GitLab token + repo; test connection; push all `content/*.skill` to the remote path (see [php-git-simple](https://github.com/yllemo/php-git-simple)). Settings in `config/git.php` (gitignored).
 
 ### 🤖 MCP Endpoint (`/mcp/index.php`)
-**Read endpoint for AI clients (JSON-RPC style). Respects access and visibility settings.**
-- Methods: `initialize`, `tools/list`, `tools/call`, `ping`
+**MCP 2026-07-28 over stateless Streamable HTTP with JSON responses. Respects access and visibility settings.**
+- Methods: `server/discover`, `tools/list`, `tools/call`, `ping`
+- Every request includes version/client metadata in `params._meta` and matching MCP headers; no initialize handshake or MCP session.
+- Open `/mcp/test.php` for manual calls and automated protocol checks.
+- The test panel uses your current browser login. Run HTTP regression checks with `node mcp/check.mjs http://127.0.0.1:8000/mcp/index.php` against a running PHP server (Node.js is needed only for this test script).
+- Older clients using `initialize` must migrate to the per-request metadata format. GET and DELETE return `405`; notifications return an empty `202` response.
 - Tools:
   - `list_skills`
   - `read_skill`
   - `search_skills`
-- See [`MCP.md`](MCP.md) for payload examples and integration details
+- See [`AI.md`](AI.md) for payload examples, required headers and integration details
 
 ## 📦 .skill File Format
 
