@@ -13,7 +13,7 @@ header('X-Content-Type-Options: nosniff');
 // Browser requests must originate from this application's origin.
 if (isset($_SERVER['HTTP_ORIGIN'])) {
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $expected = $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? '');
+    $expected = rtrim(getenv('MCP_PUBLIC_ORIGIN') ?: ($scheme . '://' . ($_SERVER['HTTP_HOST'] ?? '')), '/');
     if (strcasecmp($_SERVER['HTTP_ORIGIN'], $expected) !== 0) {
         mcp_send_error(null, -32600, 'Forbidden origin', 403);
     }
@@ -39,6 +39,7 @@ $error = mcp_validate_request($req, [
     'method' => $_SERVER['HTTP_MCP_METHOD'] ?? null,
     'name' => $_SERVER['HTTP_MCP_NAME'] ?? null,
 ]);
+$mcpVersion = mcp_request_version($req, ['version' => $_SERVER['HTTP_MCP_PROTOCOL_VERSION'] ?? null]);
 if ($error !== null) {
     mcp_send_error($id, $error['code'], $error['message'], 400, $error['data']);
 }
@@ -49,9 +50,16 @@ if (!property_exists($req, 'id')) {
 }
 $params = $req->params ?? new stdClass();
 switch ($req->method) {
+    case 'initialize':
+        mcp_send_result($id, [
+            'protocolVersion' => $mcpVersion,
+            'capabilities' => ['tools' => new stdClass()],
+            'serverInfo' => mcp_server_info(),
+        ]);
+        break;
     case 'server/discover':
         mcp_send_result($id, [
-            'supportedVersions' => [MCP_PROTOCOL_VERSION],
+            'supportedVersions' => MCP_SUPPORTED_VERSIONS,
             'capabilities' => ['tools' => new stdClass()],
             'ttlMs' => 0,
             'cacheScope' => 'private',
@@ -227,12 +235,17 @@ function mcp_error_result(string $msg): array {
 }
 
 function mcp_send_result($id, array $result): void {
-    $result['resultType'] = 'complete';
-    $result['_meta'] = ['io.modelcontextprotocol/serverInfo' => mcp_server_info()];
+    global $mcpVersion;
+    if ($mcpVersion === MCP_PROTOCOL_VERSION) {
+        $result['resultType'] = 'complete';
+        $result['_meta'] = ['io.modelcontextprotocol/serverInfo' => mcp_server_info()];
+    } else {
+        unset($result['ttlMs'], $result['cacheScope']);
+    }
     echo json_encode([
         'jsonrpc' => '2.0',
         'id' => $id,
-        'result' => $result,
+        'result' => $result === [] ? new stdClass() : $result,
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }

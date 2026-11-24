@@ -21,8 +21,13 @@ require_once __DIR__ . '/protocol.php';
 <body>
   <h1>MCP Testpanel</h1>
   <p class="muted">Endpoint: <code id="endpoint"></code> · MCP <?= MCP_PROTOCOL_VERSION ?></p>
-  <p>Varje anrop skickar protokollversion, klientmetadata och MCP-headers. Ingen initialize krävs. Din aktuella inloggning används.</p>
+  <p>Varje anrop skickar protokollversion, klientmetadata och MCP-headers. Äldre versioner använder initialize. Din aktuella inloggning används.</p>
+  <label for="protocol">Protokollversion</label>
+  <select id="protocol"><?php foreach (MCP_SUPPORTED_VERSIONS as $version): ?>
+    <option value="<?= $version ?>"><?= $version ?></option>
+  <?php endforeach; ?></select>
   <div class="card row">
+    <button type="button" data-method="initialize">initialize (äldre klient)</button>
     <button type="button" data-method="server/discover">server/discover</button>
     <button type="button" data-method="tools/list">tools/list</button>
     <button type="button" data-method="ping">ping</button>
@@ -45,10 +50,16 @@ require_once __DIR__ . '/protocol.php';
   </div>
 <script>
 const endpoint = new URL('index.php', location.href).href;
-const version = <?= json_encode(MCP_PROTOCOL_VERSION) ?>;
+const modernVersion = <?= json_encode(MCP_PROTOCOL_VERSION) ?>;
+let version = modernVersion;
+document.getElementById('protocol').addEventListener('change', e => {version = e.target.value;});
 let nextId = 1;
 document.getElementById('endpoint').textContent = endpoint;
 function request(method, params = {}) {
+  if (method === 'initialize') return {jsonrpc:'2.0',id:nextId++,method,params:{
+    protocolVersion:version,capabilities:{},clientInfo:{name:'skill-manager-test',version:'2.1.0'}
+  }};
+  if (version !== modernVersion) return {jsonrpc:'2.0',id:nextId++,method,params};
   return {jsonrpc:'2.0', id:nextId++, method, params:{...params, _meta:{
     'io.modelcontextprotocol/protocolVersion':version,
     'io.modelcontextprotocol/clientCapabilities':{},
@@ -59,7 +70,8 @@ async function send(payload, overrides = {}, httpMethod = 'POST') {
   const headers = {'Content-Type':'application/json', Accept:'application/json, text/event-stream',
     'MCP-Protocol-Version':payload.params?._meta?.['io.modelcontextprotocol/protocolVersion'] || version,
     'Mcp-Method':payload.method, ...overrides};
-  if (payload.params?.name) headers['Mcp-Name'] = payload.params.name;
+  if (version !== modernVersion || payload.method === 'initialize') delete headers['Mcp-Method'];
+  if (payload.params?.name && version === modernVersion) headers['Mcp-Name'] = payload.params.name;
   document.getElementById('request').textContent = JSON.stringify({httpMethod, headers, body:payload},null,2);
   const res = await fetch(endpoint, {method:httpMethod, headers, credentials:'same-origin',
     body:httpMethod === 'POST' ? JSON.stringify(payload) : undefined, signal:AbortSignal.timeout(20000)});
@@ -87,6 +99,20 @@ document.getElementById('search-form').addEventListener('submit', e => {
   e.preventDefault();busy(() => send(request('tools/call',{name:'search_skills',arguments:{query:document.getElementById('search-query').value.trim()}})));
 });
 document.getElementById('run-tests').addEventListener('click', () => busy(async () => {
+  if (version !== modernVersion) {
+    const lines=[];
+    const init=await send(request('initialize'));
+    lines.push(init.body?.result?.protocolVersion === version ? 'OK — initialize' : 'FEL — initialize');
+    const ready=await send({jsonrpc:'2.0',method:'notifications/initialized'});
+    lines.push(ready.status===202 && ready.body===null ? 'OK — initialized' : 'FEL — initialized');
+    const tools=await send(request('tools/list'));
+    lines.push(tools.body?.result?.tools?.length===3 ? 'OK — tools/list' : 'FEL — tools/list');
+    const ping=await send(request('ping'));
+    lines.push(ping.status===200 && JSON.stringify(ping.body?.result)==='{}' ? 'OK — ping' : 'FEL — ping');
+    document.getElementById('test-results').textContent=lines.join('\n');
+    document.getElementById('status').textContent=lines.filter(l=>l.startsWith('OK')).length + '/4 tester godkända';
+    return;
+  }
   const checks = [
     ['Discovery',request('server/discover'),{},'POST',r => r.status===200 && r.body?.result?.supportedVersions?.includes(version)],
     ['Verktyg och JSON-schema',request('tools/list'),{},'POST',r => r.status===200 && r.body?.result?.tools?.length===3 && !Array.isArray(r.body.result.tools[0].inputSchema.properties)],

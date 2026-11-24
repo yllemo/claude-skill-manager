@@ -205,12 +205,16 @@ skill/
 - **Git sync** — Configure GitHub/GitLab token + repo; test connection; push all `content/*.skill` to the remote path (see [php-git-simple](https://github.com/yllemo/php-git-simple)). Settings in `config/git.php` (gitignored).
 
 ### 🤖 MCP Endpoint (`/mcp/index.php`)
-**MCP 2026-07-28 over stateless Streamable HTTP with JSON responses. Respects access and visibility settings.**
-- Methods: `server/discover`, `tools/list`, `tools/call`, `ping`
-- Every request includes version/client metadata in `params._meta` and matching MCP headers; no initialize handshake or MCP session.
+**MCP over Streamable HTTP with JSON responses. Supports 2025-03-26, 2025-06-18, 2025-11-25 and 2026-07-28. Respects access and visibility settings.**
+- Methods: `initialize`, `server/discover`, `tools/list`, `tools/call`, `ping`
+- 2025 clients use `initialize`, then `notifications/initialized` and the negotiated `MCP-Protocol-Version` header. No MCP session ID is required or issued.
+- 2026-07-28 clients use per-request `params._meta` and mirrored MCP headers; no initialize handshake.
 - Open `/mcp/test.php` for manual calls and automated protocol checks.
 - The test panel uses your current browser login. Run HTTP regression checks with `node mcp/check.mjs http://127.0.0.1:8000/mcp/index.php` against a running PHP server (Node.js is needed only for this test script).
-- Older clients using `initialize` must migrate to the per-request metadata format. GET and DELETE return `405`; notifications return an empty `202` response.
+- Select a protocol version in the test panel. GET and DELETE return `405`; notifications return an empty `202` response.
+- Prefer `/mcp/index.php` or `/mcp/`. The bundled Apache rewrite rule also routes `/mcp` without redirecting POST bodies (requires mod_rewrite and AllowOverride). Other web servers need equivalent routing.
+- Behind a TLS-terminating proxy, set `MCP_PUBLIC_ORIGIN=https://your-host.example` in the PHP environment for Origin validation. Forwarded headers are not trusted automatically.
+- The obsolete 2024-11-05 HTTP+SSE transport is not implemented.
 - Tools:
   - `list_skills`
   - `read_skill`

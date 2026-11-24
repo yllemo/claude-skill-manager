@@ -28,7 +28,7 @@ This is intended for AI assistants/agents that need structured access to local s
 ## Protocol Overview
 
 The server implements MCP **2026-07-28** over stateless Streamable HTTP, with JSON responses.
-There is no initialize handshake or MCP session. Every request includes protocol version and
+For 2026-07-28 there is no initialize handshake or MCP session. Every request includes protocol version and
 client capabilities in params._meta. Each POST must include:
 
 - Content-Type: application/json
@@ -45,7 +45,22 @@ Header/body mismatches return HTTP 400 and error -32020. Unknown methods return 
 Successful results include resultType: complete and server identity in result._meta.
 Discovery and tool lists include ttlMs: 0 and cacheScope: private.
 
-Older initialize-based clients must migrate to this request format.
+The same endpoint also supports **2025-03-26**, **2025-06-18** and **2025-11-25**.
+For those versions, first send initialize with protocolVersion, capabilities: {} and
+clientInfo: {name, version}. The response contains the negotiated protocolVersion,
+serverInfo and capabilities. Then send notifications/initialized (HTTP 202) and use
+the negotiated MCP-Protocol-Version header for subsequent calls. No Mcp-Method,
+Mcp-Name or per-request client metadata is required for these versions. Ping returns {}.
+The server does not issue MCP session IDs; sessions are optional in Streamable HTTP.
+Unknown initialize versions negotiate 2025-11-25; unknown versions on subsequent calls
+return -32022. Requests without a version default to 2025-03-26 for compatibility.
+The 2024-11-05 HTTP+SSE transport is not implemented.
+
+Use /mcp/index.php or /mcp/ to avoid directory redirects. Apache can also use the root
+.htaccess rule for /mcp; other servers must configure an internal route themselves.
+Set MCP_PUBLIC_ORIGIN to the external origin behind a TLS proxy. Forwarded headers
+are intentionally not trusted. Configure the proxy/web server's external scheme to
+fix any redirects generated before PHP runs.
 See the [official specification](https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning).
 
 ### Supported methods

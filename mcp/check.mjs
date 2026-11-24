@@ -34,7 +34,7 @@ await check('discovery and result metadata', async () => {
   const r = await send(p);
   assert.equal(r.status, 200);
   assert.equal(r.body.id, p.id);
-  assert.deepEqual(r.body.result.supportedVersions, [version]);
+  assert.ok(r.body.result.supportedVersions.includes(version));
   assert.equal(r.body.result.resultType, 'complete');
   assert.equal(r.body.result.cacheScope, 'private');
   assert.equal(r.body.result._meta['io.modelcontextprotocol/serverInfo'].name, 'skill-manager-mcp');
@@ -67,7 +67,7 @@ await check('unsupported version includes retry information', async () => {
   const r = await send(p);
   assert.equal(r.status, 400);
   assert.equal(r.body.error.code, -32022);
-  assert.deepEqual(r.body.error.data.supported, [version]);
+  assert.ok(r.body.error.data.supported.includes(version));
 });
 await check('missing client capabilities', async () => {
   const p = request('ping');
@@ -117,3 +117,27 @@ await check('transport and origin validation', async () => {
   assert.equal((await send(request('ping'), {Origin: new URL(endpoint).origin})).status, 200);
 });
 console.log(`${passed} protocol checks passed`);
+
+for (const legacy of ['2025-03-26','2025-06-18','2025-11-25']) {
+  await check('legacy handshake and tools: '+legacy, async () => {
+    async function legacySend(method,params={},notification=false) {
+      const payload={jsonrpc:'2.0',method,params};
+      if(!notification) payload.id=++id;
+      const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json, text/event-stream',...(method==='initialize'?{}:{'MCP-Protocol-Version':legacy})},body:JSON.stringify(payload)});
+      const text=await res.text();return {status:res.status,body:text?JSON.parse(text):null};
+    }
+    const init=await legacySend('initialize',{protocolVersion:legacy,capabilities:{},clientInfo:{name:'legacy-test',version:'1'}});
+    assert.equal(init.status,200);
+    assert.equal(init.body.result.protocolVersion,legacy);
+    assert.ok(init.body.result.capabilities.tools);
+    assert.equal((await legacySend('notifications/initialized',{},true)).status,202);
+    const tools=await legacySend('tools/list');
+    assert.equal(tools.body.result.tools.length,3);
+    assert.equal(tools.body.result.resultType,undefined);
+    assert.deepEqual((await legacySend('ping')).body.result,{});
+    const call=await legacySend('tools/call',{name:'read_skill',arguments:{file:'missing.skill'}});
+    assert.equal(call.status,200);
+    assert.equal(call.body.result.isError,true);
+  });
+}
+console.log('All modern and legacy checks passed');

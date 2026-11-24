@@ -7,10 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- MCP compatibility: restored initialize negotiation for 2025-03-26, 2025-06-18 and 2025-11-25 while retaining 2026-07-28 validation and response formats. Added version selection and legacy handshake tests.
+- MCP deployment: explicit MCP_PUBLIC_ORIGIN for TLS proxies and an Apache internal rewrite for /mcp to preserve POST bodies.
+
 ### Changed
 - Viewer sidebar: height limits and expand/collapse controls for descriptions and metadata; scrollable information area preserves space for visibility and files.
 - Dashboard: tag previews are limited to 60 characters and roughly two lines, with controls to show all tags or collapse them. Search and filters still include all tags.
-- MCP endpoint: upgraded to protocol 2026-07-28 with stateless Streamable HTTP, request metadata/header validation, discovery and current result/error formats. **Breaking:** initialize-based clients must migrate.
+- MCP endpoint: upgraded to protocol 2026-07-28 with stateless Streamable HTTP, request metadata/header validation, discovery and current result/error formats. Legacy initialize-based clients are supported alongside the modern format.
 - MCP test panel: browser requests use the current login and include automated protocol checks; added a Node.js HTTP regression script.
 - README and AI integration guide updated for the layout and MCP changes.
 

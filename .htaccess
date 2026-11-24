@@ -1,0 +1,5 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Preserve POST bodies instead of redirecting the directory URL to /mcp/.
+    RewriteRule ^mcp$ mcp/index.php [END]
+</IfModule>
